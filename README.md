@@ -30,14 +30,19 @@ and then try again.
 
 # Usage
 
-## How to run the demo agent:
+## How to launch the environment:
 1. With the shell go to the pal directory and run the following command: 
 > ./gradlew runclient
-* This should take a moment and start a Minecraft client self-host on 127.0.0.1:9000.
+* This should take a moment and start a Minecraft client self-host on 127.0.0.1:9000. You need to keep the shell open in the background. Every time the client is closed this is your first step.
 2. Go to the PolyPlan directory and run the following command (update the path accordingly): 
 > python3.8 RunEnvironment.py -domain /locaion/to/your/pal/available_tests/pogo_nonov.json
-* This will start your demo environment on the Minecraft client.
-3. Then just run the following command: 
+* This will start your demo environment on the Minecraft client. Every time you want to reset the environment you can use this command.
+
+## How to launch your agent:
+1. You can run a basic agent with the following command: 
 > python3.8 demo_agent.py 
-* Now you can watch the demo agent make a wooden pogo.
+* Now you can watch the demo agent make a wooden pogo from a hard-coded list of commands.
+2. You can run a more generic struct of an agent with the following command: 
+> python3.8 demo_custom_agent.py 
+* Now you can watch the demo agent make a wooden pogo from an external text file (name MyScript.txt) with a list of commands while recording the state-action and exporting it (to a file name learning_agent.json).
 
