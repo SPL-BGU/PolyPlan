@@ -1,3 +1,5 @@
+[![code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 # Getting Started
 
 I recommending to use ubuntu as an operating system or using wsl on windows. <br />
@@ -36,7 +38,7 @@ and then try again.
 > ./gradlew runclient
 * This should take a moment and start a Minecraft client self-host on 127.0.0.1:9000. You need to keep the shell open in the background. Every time the client is closed this is your first step.
 2. Go to the PolyPlan directory and run the following command (update the path accordingly): 
-> python3.8 RunEnvironment.py -domain /locaion/to/your/pal/available_tests/pogo_nonov.json
+> python3.8 run_environment.py -domain /locaion/to/your/pal/available_tests/pogo_nonov.json
 * This will start your demo environment on the Minecraft client. Every time you want to reset the environment you can use this command.
 
 ## How to launch your agent:

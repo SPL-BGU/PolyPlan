@@ -14,13 +14,13 @@ def main():
         print("RunEnvironment.py -domain <domain_location>")
         sys.exit(2)
 
-    print("START INITIALIZING")
+    print("Start INITIALIZING")
 
-    AGENT_HOST = "127.0.0.1"
-    AGENT_PORT = 9000
+    agent_host = "127.0.0.1"
+    agent_port = 9000
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((AGENT_HOST, AGENT_PORT))
+    sock.connect((agent_host, agent_port))
 
     data_dict = utils.send_command(sock, "START")
     print(data_dict)

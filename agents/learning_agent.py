@@ -1,4 +1,4 @@
-from Agents.PolycraftAgent import PolycraftAgent
+from agents.polycraft_agent import PolycraftAgent
 import json
 
 
