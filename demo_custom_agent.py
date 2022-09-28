@@ -3,14 +3,17 @@ from Agents.FixedScriptAgent import FixedScriptAgent
 
 
 def main():
-    fixedScriptAgent = FixedScriptAgent("MyScript.txt")
+    fixedScriptAgent = FixedScriptAgent("my_script.txt")
     learningAgent = LearningAgent(fixedScriptAgent)
 
-    for _ in range(28):  # 28 is the number of commands in MyScript.txt
+    learningAgent.open_connection()  # open the connection to the Polycraft server
+
+    for _ in range(28):  # 28 is the number of commands in my_script.txt
         action = learningAgent.act()
         print(action)
 
-    learningAgent._export_trajectory()  # export the trajectory to a file name "learning_agent.json"
+    learningAgent.export_trajectory()  # export the trajectory to a file name "expert_trajectory.json"
+    learningAgent.close_connection()  # close the connection to the simulator
 
 
 if __name__ == "__main__":

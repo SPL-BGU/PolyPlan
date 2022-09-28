@@ -1,4 +1,5 @@
-import socket, time, json, os
+import socket, os
+import utils
 
 print("INITIALIZING")
 
@@ -45,19 +46,9 @@ command_stream = [
 ]
 
 for command in command_stream:
-    sock.send(str.encode(command + "\n"))
     print(command)
-    BUFF_SIZE = 4096  # 4 KiB
-    data = b""
-    while True:
-        part = sock.recv(BUFF_SIZE)
-        data += part
-        if len(part) < BUFF_SIZE:
-            # either 0 or end of data
-            break
-    data_dict = json.loads(data)
+    data_dict = utils.send_command(sock, command)
     print(data_dict)
-    time.sleep(0.5)
 
 sock.close()
 

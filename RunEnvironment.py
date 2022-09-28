@@ -1,9 +1,10 @@
-import socket, time, json, sys
+import socket, sys
+import utils
 
 
 def main():
     domain_location = (
-        "RESET domain /home/benjamin/Downloads/pal/available_tests/pogo_nonov.json\n"
+        "RESET domain /home/benjamin/Downloads/pal/available_tests/pogo_nonov.json"
     )
     args = sys.argv[1:]
 
@@ -21,20 +22,10 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((AGENT_HOST, AGENT_PORT))
 
-    BUFF_SIZE = 4096
-    time.sleep(1)
-
-    sock.send(str.encode("START\n"))
-    part = sock.recv(BUFF_SIZE)
-    while len(part) >= BUFF_SIZE:
-        part = sock.recv(BUFF_SIZE)
-    time.sleep(1)
-
-    sock.send(str.encode(domain_location))
-    part = sock.recv(BUFF_SIZE)
-    while len(part) >= BUFF_SIZE:
-        part = sock.recv(BUFF_SIZE)
-    time.sleep(3)
+    data_dict = utils.send_command(sock, "START")
+    print(data_dict)
+    data_dict = utils.send_command(sock, domain_location)
+    print(data_dict)
 
     sock.close()
 

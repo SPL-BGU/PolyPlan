@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Project
-learning_agent.json
+expert_trajectory.json

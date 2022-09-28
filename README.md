@@ -5,7 +5,8 @@ I recommending to use ubuntu as an operating system or using wsl on windows. <br
 ## Prerequisites
 1. Make sure that Python 3.8 is installed and active (via virtual environment or by using python3.8 instead of python/python3 command).
 2. Make sure java8 is installed and active.
-3. Follow the installation of pal - [this link](https://github.com/StephenGss/PAL/tree/release_2.0#Installation).
+3. Follow the installation of [pal](https://github.com/StephenGss/PAL/tree/release_2.0#Installation).
+* Note that the last checked working pal version with this project is [release 2.0 commit number 25d9af6](https://github.com/StephenGss/PAL/tree/25d9af6ed6d58693f96eae7927bb0852008afcfe).
 
 ### Possible issues
 While installing pal, running the command ./setup_linux_headless.sh may cause an error that can be fixed by running the following command:
@@ -44,5 +45,5 @@ and then try again.
 * Now you can watch the demo agent make a wooden pogo from a hard-coded list of commands.
 2. You can run a more generic struct of an agent with the following command: 
 > python3.8 demo_custom_agent.py 
-* Now you can watch the demo agent make a wooden pogo from an external text file (name MyScript.txt) with a list of commands while recording the state-action and exporting it (to a file name learning_agent.json).
+* Now you can watch the demo agent make a wooden pogo from an external text file (name my_script.txt) with a list of commands while recording the state-action and exporting it (to a file name expert_trajectory.json).
 

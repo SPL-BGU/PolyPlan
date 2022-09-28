@@ -6,9 +6,8 @@ class LearningAgent(PolycraftAgent):
     """Agent that record the state and action the delegate agent takes."""
 
     def __init__(self, agent):
+        super().__init__()
         self._agent = agent
-        agent.close_connection()
-        super().__init__(agent.host, agent.port)
         self._record = {}
         self._no_action = 0
 
@@ -19,14 +18,21 @@ class LearningAgent(PolycraftAgent):
 
     def do(self, state):
         """Choose an action, save it and then send it to the Polycraft server."""
+        self._store_state(state)
         action = super().do(state)
-        self._record[self._no_action] = {"state": state, "action": action}
-        # TODO: state = before ?
-        # TODO: add "after" state
-        self._no_action += 1
+        self._store_action(action)
         return action
 
-    def _export_trajectory(self, filename="learning_agent.json"):
+    def _store_state(self, state):
+        """Store the agent state."""
+        self._record[self._no_action] = {"state": state}
+
+    def _store_action(self, action):
+        """Store the agent's action corresponds to his state."""
+        self._record[self._no_action]["action"] = action
+        self._no_action += 1
+
+    def export_trajectory(self, filename="expert_trajectory.json"):
         """Export the trajectory to a JSON file."""
         with open(filename, "w") as fp:
             json.dump(self._record, fp)

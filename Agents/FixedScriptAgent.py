@@ -4,8 +4,8 @@ from Agents.PolycraftAgent import PolycraftAgent
 class FixedScriptAgent(PolycraftAgent):
     """Agent that follows a fixed script."""
 
-    def __init__(self, filename, host="127.0.0.1", port=9000):
-        super().__init__(host, port)
+    def __init__(self, filename):
+        super().__init__()
         self._file = open(filename, "r")
 
     # overriding abstract method
