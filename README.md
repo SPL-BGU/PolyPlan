@@ -33,19 +33,21 @@ and then try again.
 
 # Usage
 
-## How to launch the environment:
-1. With the shell go to the pal directory and run the following command: 
-> ./gradlew runclient
-* This should take a moment and start a Minecraft client self-host on 127.0.0.1:9000. You need to keep the shell open in the background. Every time the client is closed this is your first step.
-2. Go to the PolyPlan directory and run the following command (update the path accordingly): 
-> python3.8 run_environment.py -domain /locaion/to/your/pal/available_tests/pogo_nonov.json
-* This will start your demo environment on the Minecraft client. Every time you want to reset the environment you can use this command.
-
 ## How to launch your agent:
-1. You can run a basic agent with the following command: 
-> python3.8 demo_agent.py 
-* Now you can watch the demo agent make a wooden pogo from a hard-coded list of commands.
-2. You can run a more generic struct of an agent with the following command: 
+1. You need to update the pal location in the config.py file
+2. Now you can run the demo agent with the following command: 
 > python3.8 demo_custom_agent.py 
-* Now you can watch the demo agent make a wooden pogo from an external text file (name my_script.txt) with a list of commands while recording the state-action and exporting it (to a file name expert_trajectory.json).
+* The demo agent makes a wooden pogo from a list of commands (name my_script.txt) while recording the state-action and exporting it (to a file name expert_trajectory.json).
 
+## How to use the environment:
+1. You can run only the Polycraft server with the following code: 
+> env = PolycraftGymEnv(visually=True) <br />
+> env.reset() <br />
+> env.close(end_pal=False) <br />
+* As seen in demo_custom_agent.py
+2. You can use it as a custom ai gym environment:
+> env = PolycraftGymEnv(visually=True) <br />
+> model = DQN("MultiInputPolicy", env, verbose=1) <br />
+> model.learn(total_timesteps=1000) <br />
+> env.close() <br />
+* As seen in playground.py

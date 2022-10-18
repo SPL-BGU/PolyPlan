@@ -1,14 +1,22 @@
+from polycraft_gym_env import PolycraftGymEnv
 from agents.learning_agent import LearningAgent
 from agents.fixed_script_agent import FixedScriptAgent
 
 
 def main():
+    # start the polycraft environment and keep it open
+    env = PolycraftGymEnv(
+        visually=True, start_pal=True
+    )  # after the first run for running again you need to change start_pal to False
+    env.reset()  # reset the environment
+    env.close(end_pal=False)
+
     fixed_script_agent = FixedScriptAgent("my_script.txt")
     learning_agent = LearningAgent(fixed_script_agent)
 
     learning_agent.open_connection()  # open the connection to the Polycraft server
 
-    for _ in range(28):  # 28 is the number of commands in my_script.txt
+    for _ in range(32):  # 32 is the number of commands in my_script.txt
         action = learning_agent.act()
         print(action)
 

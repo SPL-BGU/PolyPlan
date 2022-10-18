@@ -130,3 +130,5 @@ dmypy.json
 
 # Project
 expert_trajectory.json
+models/
+logs/
