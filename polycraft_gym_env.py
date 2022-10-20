@@ -133,7 +133,6 @@ class PolycraftGymEnv(Env):
         return self.state
 
     def render(self):
-        # pass
         # print(f"Rounds Left: {self.rounds}")
         print(f"Action: {self.action}")
         print(f"State: {self.state}")
@@ -164,7 +163,7 @@ class PolycraftGymEnv(Env):
             sense_all["blockInFront"]["name"]
         )
 
-        # update the inventory and the reward
+        # update the inventory
         inventory = np.zeros(
             (2, 9),
             dtype=np.uint8,
@@ -173,13 +172,17 @@ class PolycraftGymEnv(Env):
             if location == "selectedItem":
                 continue
             location = int(location)
-            self.reward += self._get_reward(location, item)
             # inventory[0][location] = location
             inventory[0][location] = utils.Decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
         self.state[
             "inventory"
         ] = inventory.ravel()  # flatten the inventory to 1D vector
+
+        # update the reward
+        self.reward = int(
+            self.state["goalAchieved"]
+        )  # binary reward - achieved the goal or not
 
         # location in map without y (up down movement)
         self.state["pos"][0] = sense_all["player"]["pos"][0]
@@ -205,13 +208,6 @@ class PolycraftGymEnv(Env):
 
         self.collected_reward += self.reward
         return self.reward
-
-    def _get_reward(self, location, item):
-        inventory = self.state["inventory"].reshape(2, 9)
-        if item["item"] == "minecraft:log":
-            if inventory[1][location] < item["count"]:
-                return 1
-        return 0
 
     def _start_pal(self):
         """Launch Minecraft Client"""
