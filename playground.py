@@ -1,5 +1,5 @@
 from polycraft_gym_env import PolycraftGymEnv
-from stable_baselines3 import DQN
+from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.env_checker import check_env
 import os
 
@@ -26,50 +26,54 @@ def main():
     # env.close()
     # return
 
-    env = PolycraftGymEnv(visually=True)
+    env = PolycraftGymEnv(visually=True, start_pal=True)
 
-    # training the model
-    models_dir = "models/DQN"
-    logdir = "logs"
+    training = True
 
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
+    if training:
+        # training the model
+        models_dir = "models/PPO"
+        logdir = "logs"
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+        if not os.path.exists(models_dir):
+            os.makedirs(models_dir)
 
-    print("Start training")
-    model = DQN(
-        "MultiInputPolicy",
-        env,
-        verbose=1,
-        target_update_interval=100,
-        tensorboard_log=logdir,
-    )
-    TIMESTEPS = 1000  # 1000 actions takes 2.5 mins
-    for i in range(1, 3):
-        model.learn(
-            total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="DQN"
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
+        print("Start training")
+        batch_size = 32
+        model = PPO(
+            "MultiInputPolicy",
+            env,
+            verbose=1,
+            # learning_starts=0,
+            n_steps=batch_size * 2,
+            batch_size=batch_size,
+            # target_update_interval=batch_size,
+            tensorboard_log=logdir,
         )
-        model.save(f"{models_dir}/{TIMESTEPS*i}.h5f")
-    print("Done training")
-    env.close()
-    return
 
-    # loading the model
-    # model = DQN.load("model.h5f", env=env)
+        epochs = 4
+        TIMESTEPS = batch_size * 4
+        # actions = epochs * TIMESTEPS, 1000 actions takes 2.5 mins
+        for i in range(1, epochs + 1):  # save the model every epoch
+            model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False)
+            model.save(f"{models_dir}/{i*TIMESTEPS}.h5f")
+        print("Done training")
+    else:
+        # loading the model
+        model = PPO.load("models/PPO/512.h5f", env=env)
 
-    state = env.reset()
-    done = False
-    # while not done:
-    for _ in range(1000):
-        action, _state = model.predict(
-            state, deterministic=True
-        )  # work only as deterministic
-        state, reward, done, info = env.step(action)
-        env.render()
+        state = env.reset()
+        done = False
+        # while not done:
+        for _ in range(100):
+            action, _state = model.predict(state, deterministic=False)
+            state, reward, done, info = env.step(action)
+            env.render()
 
-    env.close()
+    env.close(end_pal=True)
 
 
 if __name__ == "__main__":
