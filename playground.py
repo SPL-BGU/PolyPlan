@@ -56,27 +56,25 @@ def main():
             tensorboard_log=logdir,
         )
 
-        epochs = 10
+        epochs = 6
         TIMESTEPS = batch_size * 4
         # actions = epochs * TIMESTEPS, 1000 actions takes 2.5 mins
+        # example: 3 * (32*4) ~= 1000 actions = 1 min
         for i in range(1, epochs + 1):  # save the model every epoch
             model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False)
             model.save(f"{models_dir}/{i*TIMESTEPS}.h5f")
         print("Done training")
     else:
-        # loading the model
-        model = PPO.load("models/PPO/1280.h5f", env=env)
-
-        state = env.reset()
-        done = False
-        # while not done:
-        for _ in range(100):
-            action, _state = model.predict(state, deterministic=False)
-            state, reward, done, info = env.step(action)
-            env.render()
-
-        # rewards, _ = evaluate_policy(model, env, 1, return_episode_rewards=True)
-        # print("Rewards:", rewards)
+        # load and evaluate the model
+        model = PPO.load("models/PPO/640.h5f", env=env)
+        rewards, _ = evaluate_policy(
+            model=model,
+            env=env,
+            n_eval_episodes=5,
+            return_episode_rewards=True,
+            deterministic=True,
+        )
+        print("Rewards:", rewards)
 
     env.close(end_pal=True)
 

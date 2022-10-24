@@ -22,6 +22,7 @@ class PolycraftGymEnv(Env):
         self,
         visually=False,
         start_pal=True,
+        rounds=64,
     ):
 
         # start polycraft server
@@ -99,11 +100,12 @@ class PolycraftGymEnv(Env):
         self.reward = 0
 
         # no. of rounds
-        # self.rounds = 200
+        self.max_rounds = rounds
+        self.rounds = rounds
 
     def step(self, action):
         info = {}
-        # self.rounds -= 1
+        self.rounds -= 1
 
         command = utils.Decoder.decode_action_type(action)
         self.action = command
@@ -112,7 +114,10 @@ class PolycraftGymEnv(Env):
 
         self._sense_all()  # update the state and get reward
 
-        done = bool(self.state["goalAchieved"])
+        if self.rounds == 0:
+            done = True
+        else:
+            done = bool(self.state["goalAchieved"])
 
         return self.state, self.reward, done, info
 
@@ -129,11 +134,11 @@ class PolycraftGymEnv(Env):
         self.collected_reward = 0
         self.action = None
         self._sense_all()
-        # self.rounds = 200
+        self.rounds = self.max_rounds
         return self.state
 
     def render(self):
-        # print(f"Rounds Left: {self.rounds}")
+        print(f"Rounds Left: {self.rounds}")
         print(f"Action: {self.action}")
         print(f"State: {self.state}")
         print(f"Reward: {self.reward}")
