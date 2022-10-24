@@ -130,5 +130,7 @@ dmypy.json
 
 # Project
 expert_trajectory.json
+cProfile.txt
+cProfile.prof
 models/
 logs/

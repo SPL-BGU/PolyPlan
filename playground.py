@@ -1,6 +1,8 @@
 from polycraft_gym_env import PolycraftGymEnv
 from stable_baselines3 import DQN, PPO
+import cProfile, pstats
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.evaluation import evaluate_policy
 import os
 
 
@@ -54,7 +56,7 @@ def main():
             tensorboard_log=logdir,
         )
 
-        epochs = 4
+        epochs = 10
         TIMESTEPS = batch_size * 4
         # actions = epochs * TIMESTEPS, 1000 actions takes 2.5 mins
         for i in range(1, epochs + 1):  # save the model every epoch
@@ -63,7 +65,7 @@ def main():
         print("Done training")
     else:
         # loading the model
-        model = PPO.load("models/PPO/512.h5f", env=env)
+        model = PPO.load("models/PPO/1280.h5f", env=env)
 
         state = env.reset()
         done = False
@@ -73,8 +75,18 @@ def main():
             state, reward, done, info = env.step(action)
             env.render()
 
+        # rewards, _ = evaluate_policy(model, env, 1, return_episode_rewards=True)
+        # print("Rewards:", rewards)
+
     env.close(end_pal=True)
 
 
 if __name__ == "__main__":
+    # cProfile.run("main()", filename="cProfile.prof")
+    # file = open("cProfile.txt", "w")
+    # profile = pstats.Stats("cProfile.prof", stream=file)
+    # profile.sort_stats("tottime")
+    # profile.print_stats(50)
+    # file.close()
+
     main()
