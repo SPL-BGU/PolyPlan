@@ -58,7 +58,7 @@ class PolycraftGymEnv(Env):
                 "blockInFront": Discrete(utils.Decoder.get_blocks_size()),
                 "gameMap": Box(
                     low=0,
-                    high=max(32, utils.Decoder.get_blocks_size()),
+                    high=utils.Decoder.get_blocks_size(),
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
                 ),  # map (32*32*2)and for each point (block) show name and isAccessible (2) as 1D vector
@@ -75,7 +75,7 @@ class PolycraftGymEnv(Env):
             }
         )
 
-        self.action_space = Discrete(utils.Decoder.get_actions_size())
+        self.action_space = utils.UnblancedDiscrete(utils.Decoder.get_actions_size())
 
         # current state start with all zeros
         self.state = OrderedDict(
@@ -119,7 +119,7 @@ class PolycraftGymEnv(Env):
         else:
             done = bool(self.state["goalAchieved"])
 
-        return self.state, self.reward, done, info
+        return self.state, float(self.reward), done, info
 
     def reset(self):
 
@@ -129,6 +129,10 @@ class PolycraftGymEnv(Env):
             while "game initialization completed" not in str(self._next_line):
                 self._next_line = self._check_queues()
         time.sleep(2)
+
+        # reset the teleport according to the new domain
+        sense_all = utils.send_command(self._sock, "SENSE_ALL NONAV")
+        utils.Decoder.update_actions(sense_all)
 
         # reset the state
         self.collected_reward = 0
