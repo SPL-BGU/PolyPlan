@@ -1,26 +1,38 @@
-from polycraft_gym_env import PolycraftGymEnv
-from stable_baselines3 import DQN, PPO
-import cProfile, pstats
-from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.evaluation import evaluate_policy
 import os
+import numpy as np
+from polycraft_gym_env import PolycraftGymEnv
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
+
+import cProfile, pstats
+from stable_baselines3.common.evaluation import evaluate_policy
+
+from imitation.algorithms import bc
+from imitation.algorithms.adversarial.gail import GAIL
+from imitation.data import rollout
+from imitation.data.wrappers import RolloutInfoWrapper
+from imitation.rewards.reward_nets import BasicRewardNet
+from imitation.util.networks import RunningNorm
+
+
+def expert(arr):
+    # demo agent that always goes forward
+    result = np.zeros((7,), dtype=int)
+    result[0] = 1
+    return [result]
 
 
 def main():
 
-    # Check that an environment follows Gym API
-    # check_env(PolycraftGymEnv(), skip_render_check=False)
-    # return
-
     # basic
-    # env = PolycraftGymEnv(visually=True)
+    # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
     # file = open("my_playground.txt", "r")
     # domain_path = file.readline()
     # # while domain_path != "done\n":
     # for _ in range(1):
     #     env.set_domain(domain_path)
     #     state = env.reset()
-    #     for _ in range(10):
+    #     for _ in range(100):
     #         action = env.action_space.sample()
     #         state, reward, done, info = env.step(action)
     #         env.render()
@@ -28,7 +40,7 @@ def main():
     # env.close()
     # return
 
-    env = PolycraftGymEnv(visually=True, start_pal=True)
+    env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
 
     training = True
 
@@ -44,19 +56,59 @@ def main():
             os.makedirs(logdir)
 
         print("Start training")
+
+        venv = DummyVecEnv([lambda: RolloutInfoWrapper(env)])
+
+        # create expert policy
+        rollouts = rollout.rollout(
+            expert,
+            venv,
+            rollout.make_sample_until(min_timesteps=None, min_episodes=1),
+        )
+
+        # behavior cloning
+        # bc_trainer = bc.BC(
+        #     observation_space=env.observation_space,
+        #     action_space=env.action_space,
+        #     demonstrations=rollouts,
+        # )
+        # bc_trainer.train(n_epochs=100)
+        # reward, _ = evaluate_policy(bc_trainer.policy, env, 1)
+        # env.close()
+        # return
+
+        # agent
         batch_size = 32
         model = PPO(
-            "MultiInputPolicy",
+            "MlpPolicy",
             env,
             verbose=1,
-            # learning_starts=0,
             n_steps=batch_size * 2,
             batch_size=batch_size,
-            # target_update_interval=batch_size,
             tensorboard_log=logdir,
         )
 
-        epochs = 6
+        # trainer
+        reward_net = BasicRewardNet(
+            env.observation_space,
+            env.action_space,
+            normalize_input_layer=RunningNorm,
+        )
+        gail_trainer = GAIL(
+            demonstrations=rollouts,
+            demo_batch_size=batch_size,
+            gen_replay_buffer_capacity=batch_size * 2,
+            n_disc_updates_per_round=4,
+            venv=venv,
+            gen_algo=model,
+            reward_net=reward_net,
+        )
+
+        # pretrain with behavior cloning using GAIL
+        gail_trainer.train(128)
+
+        # training
+        epochs = 1  # 3 * 1
         TIMESTEPS = batch_size * 4
         # actions = epochs * TIMESTEPS, 1000 actions takes 2.5 mins
         # example: 3 * (32*4) ~= 1000 actions = 1 min
@@ -76,7 +128,7 @@ def main():
         )
         print("Rewards:", rewards)
 
-    env.close(end_pal=True)
+    env.close()
 
 
 if __name__ == "__main__":

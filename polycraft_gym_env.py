@@ -1,6 +1,7 @@
 from gym import Env
 from gym.spaces import Box, Discrete, MultiDiscrete
 from gym.spaces import Dict as GymDict
+from gym.spaces import flatten_space, flatten
 import sys, time, socket, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
@@ -16,12 +17,14 @@ class PolycraftGymEnv(Env):
     args:
         visually: if True, the environment will be displayed in the screen
         start_pal: if True, the pal will be started
+        keep_alive: if True, the pal will be kept alive after the environment is closed
     """
 
     def __init__(
         self,
         visually=False,
         start_pal=True,
+        keep_alive=False,
         rounds=64,
     ):
 
@@ -36,6 +39,7 @@ class PolycraftGymEnv(Env):
             while "Minecraft finished loading" not in str(self._next_line):
                 self._next_line = self._check_queues()
         self.pal_owner = start_pal
+        self._keep_alive = keep_alive
 
         # init socket connection to polycraft
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -53,7 +57,7 @@ class PolycraftGymEnv(Env):
         # openai gym environment
         super().__init__()
 
-        self.observation_space = GymDict(
+        self._observation_space = GymDict(
             {
                 "blockInFront": Discrete(utils.Decoder.get_blocks_size()),
                 "gameMap": Box(
@@ -74,11 +78,13 @@ class PolycraftGymEnv(Env):
                 ),  # map size + 1 to all, without y (up down movement)
             }
         )
+        self.observation_space = flatten_space(self._observation_space)
 
         self.action_space = utils.UnblancedDiscrete(utils.Decoder.get_actions_size())
+        # self.action_space = utils.MultiDiscrete(utils.Decoder.get_actions_size())
 
         # current state start with all zeros
-        self.state = OrderedDict(
+        self._state = OrderedDict(
             {
                 "blockInFront": 0,
                 "gameMap": np.zeros(
@@ -93,6 +99,7 @@ class PolycraftGymEnv(Env):
                 "pos": np.array([0, 0]),
             }
         )
+        self.state = flatten(self._observation_space, self._state)
 
         self.collected_reward = 0
 
@@ -117,7 +124,7 @@ class PolycraftGymEnv(Env):
         if self.rounds == 0:
             done = True
         else:
-            done = bool(self.state["goalAchieved"])
+            done = bool(self._state["goalAchieved"])
 
         return self.state, float(self.reward), done, info
 
@@ -151,9 +158,9 @@ class PolycraftGymEnv(Env):
             "============================================================================="
         )
 
-    def close(self, end_pal=True):
+    def close(self):
         """Close the environment"""
-        if end_pal:
+        if not self._keep_alive:
             utils.send_command(self._sock, "RESET")
         self._sock.close()
         return super().close()
@@ -168,7 +175,7 @@ class PolycraftGymEnv(Env):
         # get the state from the Polycraft server
         sense_all = utils.send_command(self._sock, "SENSE_ALL NONAV")
 
-        self.state["blockInFront"] = utils.Decoder.decode_block_type(
+        self._state["blockInFront"] = utils.Decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
         )
 
@@ -184,18 +191,18 @@ class PolycraftGymEnv(Env):
             # inventory[0][location] = location
             inventory[0][location] = utils.Decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
-        self.state[
+        self._state[
             "inventory"
         ] = inventory.ravel()  # flatten the inventory to 1D vector
 
         # update the reward
         self.reward = int(
-            self.state["goalAchieved"]
+            self._state["goalAchieved"]
         )  # binary reward - achieved the goal or not
 
         # location in map without y (up down movement)
-        self.state["pos"][0] = sense_all["player"]["pos"][0]
-        self.state["pos"][1] = sense_all["player"]["pos"][2]
+        self._state["pos"][0] = sense_all["player"]["pos"][0]
+        self._state["pos"][1] = sense_all["player"]["pos"][2]
 
         # update the gameMap
         gameMap = np.zeros(
@@ -208,11 +215,12 @@ class PolycraftGymEnv(Env):
                 game_block["name"]
             )
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])
-        self.state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
-        self.state["goalAchieved"] = (
+        self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
+        self._state["goalAchieved"] = (
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )
 
+        self.state = flatten(self._observation_space, self._state)
         self.collected_reward += self.reward
 
         self.collected_reward += self.reward
