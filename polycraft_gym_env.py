@@ -80,8 +80,7 @@ class PolycraftGymEnv(Env):
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = utils.UnblancedDiscrete(utils.Decoder.get_actions_size())
-        # self.action_space = utils.MultiDiscrete(utils.Decoder.get_actions_size())
+        self.action_space = Discrete(utils.Decoder.get_actions_size())
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -151,7 +150,7 @@ class PolycraftGymEnv(Env):
     def render(self):
         print(f"Rounds Left: {self.rounds}")
         print(f"Action: {self.action}")
-        print(f"State: {self.state}")
+        # print(f"State: {self.state}")
         print(f"Reward: {self.reward}")
         print(f"Total Reward : {self.collected_reward}")
         print(

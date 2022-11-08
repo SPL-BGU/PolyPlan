@@ -17,25 +17,31 @@ from imitation.util.networks import RunningNorm
 
 def expert(arr):
     # demo agent that always goes forward
-    result = np.zeros((7,), dtype=int)
-    result[0] = 1
+    result = 1
     return [result]
 
 
 def main():
 
+    # only start pal
+    # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=True)
+    # env.close()
+    # return
+
     # basic
-    # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
+    # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=True)
     # file = open("my_playground.txt", "r")
     # domain_path = file.readline()
     # # while domain_path != "done\n":
     # for _ in range(1):
     #     env.set_domain(domain_path)
-    #     state = env.reset()
-    #     for _ in range(100):
-    #         action = env.action_space.sample()
-    #         state, reward, done, info = env.step(action)
-    #         env.render()
+    #     for _ in range(1):
+    #         state = env.reset()
+    #         done = False
+    #         while not done:
+    #             action = env.action_space.sample()
+    #             state, reward, done, info = env.step(action)
+    #             env.render()
     #     domain_path = file.readline()
     # env.close()
     # return
@@ -105,7 +111,7 @@ def main():
         )
 
         # pretrain with behavior cloning using GAIL
-        gail_trainer.train(128)
+        gail_trainer.train(1000)
 
         # training
         epochs = 1  # 3 * 1

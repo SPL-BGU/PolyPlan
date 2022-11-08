@@ -1,5 +1,3 @@
-from gym.spaces import MultiDiscrete
-import numpy as np
 import json
 import socket
 from typing import Dict, List
@@ -45,6 +43,14 @@ class ActionType:
     @property
     def length(self) -> int:
         return len(self._actions)
+
+
+class NOP(ActionType):
+    class_actions = {0: "NOP"}
+
+    def __init__(self):
+        super().__init__()
+        self._actions = NOP.class_actions
 
 
 class Move(ActionType):
@@ -102,9 +108,7 @@ class TP(ActionType):
                 tp_blocks.append(location)
 
         # update the actions
-        for index in range(1, min(len(TP.class_actions), len(tp_blocks)) + 1):
-            if index >= len(tp_blocks):
-                break
+        for index in range(min(len(TP.class_actions), len(tp_blocks)) + 1):
             TP.class_actions[index] = "TP_TO " + tp_blocks[index - 1]
 
 
@@ -140,7 +144,7 @@ class PlaceTreeTap(ActionType):
 class Decoder:
 
     actions_decoder: Dict[int, Dict[int, str]]
-    actions_size: List[int]
+    actions_size: Dict[int, int]
     blocks_decoder: Dict[str, int]
     blocks_size: int
     items_decoder: Dict[str, int]
@@ -149,23 +153,25 @@ class Decoder:
     entitys_size: int
 
     actions_decoder = {
-        0: Move().actions,
-        1: Turn().actions,
-        2: Break().actions,
-        3: TP().actions,
-        4: Craft().actions,
-        5: Collect().actions,
-        6: PlaceTreeTap().actions,
+        0: NOP().actions,
+        1: Move().actions,
+        2: Turn().actions,
+        3: Break().actions,
+        4: TP().actions,
+        5: Craft().actions,
+        6: Collect().actions,
+        7: PlaceTreeTap().actions,
     }
-    actions_size = [
-        Move().length,
-        Turn().length,
-        Break().length,
-        TP().length,
-        Craft().length,
-        Collect().length,
-        PlaceTreeTap().length,
-    ]
+    actions_size = {
+        0: 0,  # NOP is no action and start at 0
+        1: Move().length,
+        2: Turn().length,
+        3: Break().length,
+        4: TP().length,
+        5: Craft().length,
+        6: Collect().length,
+        7: PlaceTreeTap().length,
+    }
 
     blocks_decoder = {
         "minecraft:air": 0,
@@ -210,22 +216,20 @@ class Decoder:
     @staticmethod
     def update_actions(sense_all: Dict = None) -> None:
         TP.update_actions(sense_all)
-        Decoder.actions_decoder[3] = TP().actions
+        Decoder.actions_decoder[4] = TP().actions
 
     @staticmethod
-    def decode_action_type(lst: List[int]) -> str:
-        # print(lst)
-        action = [(index, value) for index, value in enumerate(lst) if value > 0]
+    def decode_action_type(action: int) -> str:
+        for index, size in Decoder.actions_size.items():
+            if action <= size:
+                return Decoder.actions_decoder[index][action]
+            action -= size
 
-        if not action:
-            return "NOP"
-        else:
-            action = action[0]
-            return Decoder.actions_decoder[action[0]][action[1]]
+        raise ValueError("action is out of range")
 
     @staticmethod
     def get_actions_size() -> List[int]:
-        return Decoder.actions_size
+        return sum(Decoder.actions_size.values()) + 1  # +1 for the NOP action
 
     @staticmethod
     def decode_block_type(name) -> int:
@@ -250,23 +254,3 @@ class Decoder:
     @staticmethod
     def get_entitys_size() -> int:
         return Decoder.entitys_size
-
-
-class UnblancedDiscrete(MultiDiscrete):
-    """
-    The unblanced-discrete action space consists of a series of discrete action spaces with different number of actions in each
-    where sampling will choose one of the actions and sample it only (the others will be zero).
-
-
-    Can be initialized as UnblancedDiscrete([ 5, 2, 2 ])
-    Example for a sample [ 0, 1, 0 ]
-
-    """
-
-    # override method
-    def sample(self) -> List[int]:
-        length = len(self.nvec)
-        filtering = np.zeros((length,), dtype=int)
-        filtering[self.np_random.choice(length)] = 1
-        action = super().sample()
-        return action * filtering
