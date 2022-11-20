@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # Project
+.vscode/launch.json
 expert_trajectory.json
 cProfile.txt
 cProfile.prof

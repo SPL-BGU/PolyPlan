@@ -5,7 +5,8 @@ from gym.spaces import flatten_space, flatten
 import sys, time, socket, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
-import utils
+from utils.server_controller import ServerController
+from utils.decoder import Decoder
 import config as CONFIG
 
 
@@ -42,14 +43,12 @@ class PolycraftGymEnv(Env):
         self._keep_alive = keep_alive
 
         # init socket connection to polycraft
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._host = "127.0.0.1"
-        self._port = 9000
-        self._sock.connect((self._host, self._port))
+        self.server_controller = ServerController()
+        self.server_controller.open_connection()
 
         if start_pal:
-            utils.send_command(
-                self._sock, "START"
+            self.server_controller.send_command(
+                "START"
             )  # time to reset the environment is 10 seconds
 
         self._domain_path = CONFIG.DEFUALT_DOMAIN_PATH
@@ -59,17 +58,17 @@ class PolycraftGymEnv(Env):
 
         self._observation_space = GymDict(
             {
-                "blockInFront": Discrete(utils.Decoder.get_blocks_size()),
+                "blockInFront": Discrete(Decoder.get_blocks_size()),
                 "gameMap": Box(
                     low=0,
-                    high=utils.Decoder.get_blocks_size(),
+                    high=Decoder.get_blocks_size(),
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
                 ),  # map (32*32*2)and for each point (block) show name and isAccessible (2) as 1D vector
                 "goalAchieved": Discrete(2),
                 "inventory": Box(
                     low=0,
-                    high=utils.Decoder.get_items_size(),
+                    high=Decoder.get_items_size(),
                     shape=(2 * 9,),
                     dtype=np.uint8,
                 ),  # 1 line of inventory (1*9) and for each item show name and count (2) as 1D vector
@@ -80,7 +79,7 @@ class PolycraftGymEnv(Env):
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(utils.Decoder.get_actions_size())
+        self.action_space = Discrete(Decoder.get_actions_size())
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -113,10 +112,10 @@ class PolycraftGymEnv(Env):
         info = {}
         self.rounds -= 1
 
-        command = utils.Decoder.decode_action_type(action)
+        command = Decoder.decode_action_type(action)
         self.action = command
 
-        utils.send_command(self._sock, command)
+        self.server_controller.send_command(command)
 
         self._sense_all()  # update the state and get reward
 
@@ -130,15 +129,15 @@ class PolycraftGymEnv(Env):
     def reset(self):
 
         # reset the environment
-        utils.send_command(self._sock, f"RESET domain {self._domain_path}")
+        self.server_controller.send_command(f"RESET domain {self._domain_path}")
         if self.pal_owner:
             while "game initialization completed" not in str(self._next_line):
                 self._next_line = self._check_queues()
         time.sleep(2)
 
         # reset the teleport according to the new domain
-        sense_all = utils.send_command(self._sock, "SENSE_ALL NONAV")
-        utils.Decoder.update_actions(sense_all)
+        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+        Decoder.update_actions(sense_all)
 
         # reset the state
         self.collected_reward = 0
@@ -160,8 +159,8 @@ class PolycraftGymEnv(Env):
     def close(self):
         """Close the environment"""
         if not self._keep_alive:
-            utils.send_command(self._sock, "RESET")
-        self._sock.close()
+            self.server_controller.send_command("RESET")
+        self.server_controller.close_connection()
         return super().close()
 
     def set_domain(self, path):
@@ -172,9 +171,9 @@ class PolycraftGymEnv(Env):
         self.reward = 0
 
         # get the state from the Polycraft server
-        sense_all = utils.send_command(self._sock, "SENSE_ALL NONAV")
+        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
 
-        self._state["blockInFront"] = utils.Decoder.decode_block_type(
+        self._state["blockInFront"] = Decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
         )
 
@@ -188,7 +187,7 @@ class PolycraftGymEnv(Env):
                 continue
             location = int(location)
             # inventory[0][location] = location
-            inventory[0][location] = utils.Decoder.decode_item_type(item["item"])
+            inventory[0][location] = Decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
         self._state[
             "inventory"
@@ -210,7 +209,7 @@ class PolycraftGymEnv(Env):
         )
         for location, game_block in sense_all["map"].items():
             location = [int(i) for i in location.split(",")]
-            gameMap[location[0]][location[2]][0] = utils.Decoder.decode_block_type(
+            gameMap[location[0]][location[2]][0] = Decoder.decode_block_type(
                 game_block["name"]
             )
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])
