@@ -4,8 +4,8 @@ from agents.polycraft_agent import PolycraftAgent
 class FixedScriptAgent(PolycraftAgent):
     """Agent that follows a fixed script."""
 
-    def __init__(self, filename):
-        super().__init__()
+    def __init__(self, env, filename):
+        super().__init__(env)
         self._file = open(filename, "r")
 
     # overriding abstract method
@@ -17,8 +17,9 @@ class FixedScriptAgent(PolycraftAgent):
         """Return the next action in the script."""
         command = self._file.readline()
 
-        # if finished read the file then return NOP command
+        # if finished read the file again
         if not command:
-            return "NOP"
+            self._file.seek(0)
+            command = self._file.readline()
 
         return command[:-1]  # remove the newline character

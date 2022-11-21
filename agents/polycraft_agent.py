@@ -5,9 +5,9 @@ from utils.server_controller import ServerController
 class PolycraftAgent(ABC):
     """Abstract base class for all Polycraft agents."""
 
-    def __init__(self):
+    def __init__(self, env):
         # Create a server controller.
-        self.server_controller = ServerController()
+        self.server_controller = env.server_controller
 
     @abstractmethod
     def choose_action(self, state):
@@ -29,11 +29,3 @@ class PolycraftAgent(ABC):
         action = self.choose_action(state)
         self.server_controller.send_command(action)
         return action
-
-    def open_connection(self, host="127.0.0.1", port=9000):
-        """Open the connection to the Polycraft server."""
-        self.server_controller.open_connection(host, port)
-
-    def close_connection(self):
-        """Close the connection to the Polycraft server."""
-        self.server_controller.close_connection()
