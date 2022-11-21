@@ -8,15 +8,20 @@ def main():
     env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
 
     fixed_script_agent = FixedScriptAgent(env, "my_script.txt")
-    learning_agent = LearningAgent(env, fixed_script_agent)
 
-    env.reset()  # reset the environment
+    recording = True
 
-    for _ in range(30):  # 30 is the number of commands in my_script.txt
-        action = learning_agent.act()
-        print(action)
+    if recording:
+        learning_agent = LearningAgent(env, fixed_script_agent)
 
-    learning_agent.export_trajectory()  # export the trajectory to a file name "expert_trajectory.json"
+        learning_agent.record_trajectory(episodes=2)
+        learning_agent.export_trajectory()  # export the trajectory to a file name "expert_trajectory.pkl"
+    else:
+        env.reset()  # reset the environment
+
+        for _ in range(30):  # 30 is the number of commands in my_script.txt
+            action = fixed_script_agent.act()
+            print(action)
 
     env.close()  # close the environment
 

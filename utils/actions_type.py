@@ -80,8 +80,8 @@ class TP(ActionType):
                 tp_blocks.append(location)
 
         # update the actions
-        for index in range(min(len(TP.class_actions), len(tp_blocks)) + 1):
-            TP.class_actions[index] = "TP_TO " + tp_blocks[index - 1]
+        for index in range(min(len(TP.class_actions), len(tp_blocks))):
+            TP.class_actions[index + 1] = "TP_TO " + tp_blocks[index]
 
 
 class Craft(ActionType):

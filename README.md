@@ -42,11 +42,11 @@ and then try again.
 1. You need to update the pal location in the config.py file
 2. Now you can run the demo agent with the following command: 
 > python3.8 demo_custom_agent.py 
-* The demo agent makes a wooden pogo from a list of commands (name my_script.txt) while recording the state-action and exporting it (to a file name expert_trajectory.json).
+* The demo agent makes a wooden pogo from a list of commands (name my_script.txt). Also, you can record the expert trajectory and export it (to a file name expert_trajectory.pkl).
 
 ## How to use the environment:
 1. To run only the Polycraft server you can use the following code: 
-> env = PolycraftGymEnv(visually=True) <br />
+> env = PolycraftGymEnv(visually=True, keep_alive=True) <br />
 > env.reset() <br />
 > env.close() <br />
 * As used in demo_custom_agent.py

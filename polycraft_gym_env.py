@@ -102,6 +102,7 @@ class PolycraftGymEnv(Env):
         self.collected_reward = 0
 
         self.action = None
+        self.done = False
         self.reward = 0
 
         # no. of rounds
@@ -119,12 +120,20 @@ class PolycraftGymEnv(Env):
 
         self._sense_all()  # update the state and get reward
 
+        done = self.is_game_over()
+
+        return self.state, float(self.reward), done, info
+
+    def is_game_over(self):
+        done = False
+
         if self.rounds == 0:
             done = True
         else:
             done = bool(self._state["goalAchieved"])
 
-        return self.state, float(self.reward), done, info
+        self.done = done
+        return done
 
     def reset(self):
 
@@ -142,6 +151,7 @@ class PolycraftGymEnv(Env):
         # reset the state
         self.collected_reward = 0
         self.action = None
+        self.done = False
         self._sense_all()
         self.rounds = self.max_rounds
         return self.state

@@ -1,5 +1,5 @@
 import os
-import numpy as np
+import pickle
 from polycraft_gym_env import PolycraftGymEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -13,12 +13,6 @@ from imitation.data import rollout
 from imitation.data.wrappers import RolloutInfoWrapper
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.networks import RunningNorm
-
-
-def expert(arr):
-    # demo agent that always goes forward
-    result = 1
-    return [result]
 
 
 def main():
@@ -65,12 +59,9 @@ def main():
 
         venv = DummyVecEnv([lambda: RolloutInfoWrapper(env)])
 
-        # create expert policy
-        rollouts = rollout.rollout(
-            expert,
-            venv,
-            rollout.make_sample_until(min_timesteps=None, min_episodes=1),
-        )
+        # load expert trajectory
+        with open("expert_trajectory.pkl", "rb") as fp:
+            rollouts = pickle.load(fp)
 
         # behavior cloning
         # bc_trainer = bc.BC(
@@ -110,14 +101,14 @@ def main():
             reward_net=reward_net,
         )
 
-        # pretrain with behavior cloning using GAIL
-        gail_trainer.train(1000)
+        # pre-train with behavior cloning using GAIL
+        gail_trainer.train(384 * 1)
 
-        # training
-        epochs = 1  # 3 * 1
+        # post-training with RL
+        epochs = 3 * 1
         TIMESTEPS = batch_size * 4
         # actions = epochs * TIMESTEPS, 1000 actions takes 2.5 mins
-        # example: 3 * (32*4) ~= 1000 actions = 1 min
+        # example: 3 * (32*4) ~= 384 actions = 1 min
         for i in range(1, epochs + 1):  # save the model every epoch
             model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False)
             model.save(f"{models_dir}/{i*TIMESTEPS}.h5f")

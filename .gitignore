@@ -130,7 +130,7 @@ dmypy.json
 
 # Project
 .vscode/launch.json
-expert_trajectory.json
+expert_trajectory.pkl
 cProfile.txt
 cProfile.prof
 models/

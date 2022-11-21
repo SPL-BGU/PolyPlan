@@ -86,7 +86,21 @@ class Decoder:
                 return Decoder.actions_decoder[index][action]
             action -= size
 
-        raise ValueError("action is out of range")
+        raise ValueError(f"action '{action}' is out of range")
+
+    @staticmethod
+    def encode_action_type(action: str) -> int:
+        if action == "NOP":
+            return 0
+        for index, act in Decoder.actions_decoder.items():
+            if action in act.values():
+                return (
+                    list(act.values()).index(action)
+                    + sum(list(Decoder.actions_size.values())[:index])
+                    + 1
+                )
+
+        raise ValueError(f"action '{action}' not found")
 
     @staticmethod
     def get_actions_size() -> List[int]:
