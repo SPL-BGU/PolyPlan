@@ -14,7 +14,7 @@ def main():
     if recording:
         learning_agent = LearningAgent(env, fixed_script_agent)
 
-        learning_agent.record_trajectory(episodes=2)
+        learning_agent.record_trajectory()
         learning_agent.export_trajectory()  # export the trajectory to a file name "expert_trajectory.pkl"
     else:
         env.reset()  # reset the environment

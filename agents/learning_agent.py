@@ -24,15 +24,16 @@ class LearningAgent(PolycraftAgent):
         action = self._agent.choose_action(state)
         return [Decoder.encode_action_type(action)]
 
-    def record_trajectory(self, episodes=1):
+    def record_trajectory(self, steps=64):
         """Record the trajectory."""
         venv = DummyVecEnv([lambda: RolloutInfoWrapper(self.env)])
+        steps = max(steps, 64)
 
         # create expert policy
         self._rollouts = rollout.rollout(
             self.expert,
             venv,
-            rollout.make_sample_until(min_timesteps=None, min_episodes=episodes),
+            rollout.make_sample_until(min_timesteps=64, min_episodes=None),
         )
 
     def export_trajectory(self, filename="expert_trajectory.pkl"):
