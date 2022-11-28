@@ -2,7 +2,7 @@ from gym import Env
 from gym.spaces import Box, Discrete, MultiDiscrete
 from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
-import sys, time, socket, queue, subprocess, threading
+import sys, time, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
 from utils.server_controller import ServerController
@@ -203,11 +203,6 @@ class PolycraftGymEnv(Env):
             "inventory"
         ] = inventory.ravel()  # flatten the inventory to 1D vector
 
-        # update the reward
-        self.reward = int(
-            self._state["goalAchieved"]
-        )  # binary reward - achieved the goal or not
-
         # location in map without y (up down movement)
         self._state["pos"][0] = sense_all["player"]["pos"][0]
         self._state["pos"][1] = sense_all["player"]["pos"][2]
@@ -228,10 +223,14 @@ class PolycraftGymEnv(Env):
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )
 
-        self.state = flatten(self._observation_space, self._state)
+        # update the reward
+        self.reward = int(
+            self._state["goalAchieved"]
+        )  # binary reward - achieved the goal or not
         self.collected_reward += self.reward
 
-        self.collected_reward += self.reward
+        self.state = flatten(self._observation_space, self._state)
+
         return self.reward
 
     def _start_pal(self):
