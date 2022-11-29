@@ -1,9 +1,12 @@
 import os
 import pickle
+import shutil
+
 from polycraft_gym_env import PolycraftGymEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+import time
 import cProfile, pstats
 from stable_baselines3.common.evaluation import evaluate_policy
 
@@ -47,6 +50,17 @@ def main():
 
     if training:
 
+        # make log directory
+        logdir = f"logs/{learning_method}"
+        dir_index = 1
+        while os.path.exists(f"{logdir}/{dir_index}") and len(
+            os.listdir(f"{logdir}/{dir_index}")
+        ):
+            dir_index += 1
+        logdir = f"{logdir}/{dir_index}"
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
         print("Start training")
 
         # load expert trajectory
@@ -65,14 +79,17 @@ def main():
                 demonstrations=rollouts,
             )
 
-            TIMESTEPS = 4320 * train_time  # 4320 takes 1 minute
-            bc_trainer.train(n_epochs=TIMESTEPS)
-            bc_trainer.save_policy(f"{models_dir}/{TIMESTEPS}.h5f")
-        else:
-            logdir = "logs"
-            if not os.path.exists(logdir):
-                os.makedirs(logdir)
+            TIMESTEPS = 4320  # 4320 takes 1 minute
+            for i in range(1, train_time + 1):
+                bc_trainer.train(n_epochs=TIMESTEPS)
+                bc_trainer.save_policy(f"{models_dir}/{dir_index}_{i}_{TIMESTEPS}.h5f")
 
+                # save log
+                shutil.copy(
+                    f"{bc_trainer.logger.get_dir()}/progress.csv",
+                    f"{logdir}/progress_{i}.csv",
+                )
+        else:
             # agent
             batch_size = 32
             model = PPO(
@@ -83,6 +100,10 @@ def main():
                 batch_size=batch_size,
                 tensorboard_log=logdir,
             )
+
+            TIMESTEPS = 3 * (batch_size * 4)
+            # 1000 actions takes 2.5 mins
+            # example: 3 * (32*4) ~= 384 actions = 1 min
 
             if learning_method == "GAIL":
                 # behavior cloning using GAIL
@@ -100,20 +121,19 @@ def main():
                     venv=venv,
                     gen_algo=model,
                     reward_net=reward_net,
+                    log_dir=logdir,
+                    init_tensorboard=True,
+                    init_tensorboard_graph=True,
                 )
 
-                TIMESTEPS = 384 * train_time  # 384 actions takes 1 minute
-                gail_trainer.train(TIMESTEPS)
-                model.save(f"{models_dir}/{TIMESTEPS}.h5f")
+                for i in range(1, train_time + 1):
+                    gail_trainer.train(TIMESTEPS)
+                    model.save(f"{models_dir}/{dir_index}_{i}_{TIMESTEPS}.h5f")
             else:
                 # RL using PPO
-                epochs = 3 * train_time
-                TIMESTEPS = batch_size * 4
-                # actions = epochs * TIMESTEPS, 1000 actions takes 2.5 mins
-                # example: 3 * (32*4) ~= 384 actions = 1 min
-                for i in range(1, epochs + 1):  # save the model every epoch
+                for i in range(1, train_time + 1):
                     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False)
-                    model.save(f"{models_dir}/{i*TIMESTEPS}.h5f")
+                    model.save(f"{models_dir}/{dir_index}_{i}_{TIMESTEPS}.h5f")
 
         print("Done training")
     else:
@@ -126,9 +146,9 @@ def main():
         rewards, _ = evaluate_policy(
             model=model,
             env=env,
-            n_eval_episodes=1,
+            n_eval_episodes=10,
             return_episode_rewards=True,
-            deterministic=True,
+            deterministic=False,
         )
         print("Rewards:", rewards)
 
@@ -136,6 +156,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # profiling
     # cProfile.run("main()", filename="cProfile.prof")
     # file = open("cProfile.txt", "w")
     # profile = pstats.Stats("cProfile.prof", stream=file)
@@ -143,4 +164,15 @@ if __name__ == "__main__":
     # profile.print_stats(50)
     # file.close()
 
+    # time to run
+    # avg = 0
+    # repeats = 3
+    # for i in range(repeats):
+    #     start_time = time.time()
+    #     main()
+    #     end_time = time.time()
+    #     avg += (end_time - start_time) / repeats
+    # print(f"Average time to run: {int(end_time - start_time)}s")
+
+    # standard run
     main()
