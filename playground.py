@@ -46,7 +46,7 @@ def main():
 
     training = True
     learning_method = ["BC", "PPO", "GAIL"][0]
-    train_time = 1  # time in minutes
+    train_time :int = 1  # time in minutes
 
     if training:
 

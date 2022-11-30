@@ -5,7 +5,8 @@
 I recommending to use ubuntu as an operating system or using wsl on windows. <br />
 
 ## Prerequisites
-1. Make sure that Python 3.8 is installed and active (via virtual environment or by using python3.8 instead of python/python3 command).
+1. Make sure that Python 3.8 is installed and active (via virtual environment, conda environment or by using python3.8 instead of python commands). <br /> <br />
+For example using virtual environment:
 > python3.8 -m venv .venv <br />
 > source .venv/bin/activate <br />
 2. Make sure java8 is installed and active.
@@ -41,7 +42,7 @@ and then try again.
 ## How to launch your agent:
 1. You need to update the pal location in the config.py file
 2. Now you can run the demo agent with the following command: 
-> python3.8 demo_custom_agent.py 
+> python demo_custom_agent.py 
 * The demo agent makes a wooden pogo from a list of commands (name my_script.txt). Also, you can record the expert trajectory and export it (to a file name expert_trajectory.pkl).
 
 ## How to use the environment:

@@ -23,10 +23,10 @@ class PolycraftGymEnv(Env):
 
     def __init__(
         self,
-        visually=False,
-        start_pal=True,
-        keep_alive=False,
-        rounds=64,
+        visually: bool = False,
+        start_pal: bool = True,
+        keep_alive: bool = False,
+        rounds: int = 64,
     ):
 
         # start polycraft server
@@ -109,7 +109,7 @@ class PolycraftGymEnv(Env):
         self.max_rounds = rounds
         self.rounds = rounds
 
-    def step(self, action):
+    def step(self, action: int) -> tuple:
         info = {}
         self.rounds -= 1
 
@@ -124,7 +124,7 @@ class PolycraftGymEnv(Env):
 
         return self.state, float(self.reward), done, info
 
-    def is_game_over(self):
+    def is_game_over(self) -> bool:
         done = False
 
         if self.rounds == 0:
@@ -135,7 +135,7 @@ class PolycraftGymEnv(Env):
         self.done = done
         return done
 
-    def reset(self):
+    def reset(self) -> np.ndarray:
 
         # reset the environment
         self.server_controller.send_command(f"RESET domain {self._domain_path}")
@@ -156,7 +156,7 @@ class PolycraftGymEnv(Env):
         self.rounds = self.max_rounds
         return self.state
 
-    def render(self):
+    def render(self) -> None:
         print(f"Rounds Left: {self.rounds}")
         print(f"Action: {self.action}")
         # print(f"State: {self.state}")
@@ -166,17 +166,17 @@ class PolycraftGymEnv(Env):
             "============================================================================="
         )
 
-    def close(self):
+    def close(self) -> None:
         """Close the environment"""
         if not self._keep_alive:
             self.server_controller.send_command("RESET")
         self.server_controller.close_connection()
         return super().close()
 
-    def set_domain(self, path):
+    def set_domain(self, path: str) -> None:
         self._domain_path = path
 
-    def _sense_all(self):
+    def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""
         self.reward = 0
 
@@ -289,7 +289,7 @@ class PolycraftGymEnv(Env):
                 sys.stdout.flush()
                 pipe.stdout.flush()
 
-    def _check_queues(self, check_all=False):
+    def _check_queues(self, check_all: bool = False):
         """
         Check the STDOUT queues in both the PAL and Agent threads, logging the responses appropriately
         :return: next_line containing the STDOUT of the PAL process only:
