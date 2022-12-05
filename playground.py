@@ -46,7 +46,15 @@ def main():
 
     training = True
     learning_method = ["BC", "PPO", "GAIL"][0]
-    train_time :int = 1  # time in minutes
+    train_time: int = 1  # time in minutes
+
+    epoch: int = 64
+    batch_size: int = 32
+
+    if learning_method == "BC":
+        timesteps = 67 * epoch  # 4288 actions takes ~ 1 minute
+    else:
+        timesteps = 6 * epoch  # 384 actions takes ~ 1 minute
 
     if training:
 
@@ -79,10 +87,9 @@ def main():
                 demonstrations=rollouts,
             )
 
-            TIMESTEPS = 4320  # 4320 takes 1 minute
             for i in range(1, train_time + 1):
-                bc_trainer.train(n_epochs=TIMESTEPS)
-                bc_trainer.save_policy(f"{models_dir}/{dir_index}_{i}_{TIMESTEPS}.h5f")
+                bc_trainer.train(n_epochs=timesteps)
+                bc_trainer.save_policy(f"{models_dir}/{dir_index}_{i}_{timesteps}.h5f")
 
                 # save log
                 shutil.copy(
@@ -90,34 +97,31 @@ def main():
                     f"{logdir}/progress_{i}.csv",
                 )
         else:
+
             # agent
-            batch_size = 32
             model = PPO(
                 "MlpPolicy",
                 env,
                 verbose=1,
-                n_steps=batch_size * 2,
+                n_steps=epoch,
                 batch_size=batch_size,
                 tensorboard_log=logdir,
             )
-
-            TIMESTEPS = 3 * (batch_size * 4)
-            # 1000 actions takes 2.5 mins
-            # example: 3 * (32*4) ~= 384 actions = 1 min
 
             if learning_method == "GAIL":
                 # behavior cloning using GAIL
                 venv = DummyVecEnv([lambda: RolloutInfoWrapper(env)])
                 reward_net = BasicRewardNet(
-                    env.observation_space,
-                    env.action_space,
+                    observation_space=env.observation_space,
+                    action_space=env.action_space,
+                    use_next_state=True,  # determinestic world
+                    use_done=True,
                     normalize_input_layer=RunningNorm,
                 )
                 gail_trainer = GAIL(
                     demonstrations=rollouts,
                     demo_batch_size=batch_size,
-                    gen_replay_buffer_capacity=batch_size * 2,
-                    n_disc_updates_per_round=4,
+                    gen_replay_buffer_capacity=epoch,
                     venv=venv,
                     gen_algo=model,
                     reward_net=reward_net,
@@ -127,21 +131,21 @@ def main():
                 )
 
                 for i in range(1, train_time + 1):
-                    gail_trainer.train(TIMESTEPS)
-                    model.save(f"{models_dir}/{dir_index}_{i}_{TIMESTEPS}.h5f")
+                    gail_trainer.train(timesteps)
+                    model.save(f"{models_dir}/{dir_index}_{i}_{timesteps}.h5f")
             else:
                 # RL using PPO
                 for i in range(1, train_time + 1):
-                    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False)
-                    model.save(f"{models_dir}/{dir_index}_{i}_{TIMESTEPS}.h5f")
+                    model.learn(total_timesteps=timesteps, reset_num_timesteps=False)
+                    model.save(f"{models_dir}/{dir_index}_{i}_{timesteps}.h5f")
 
         print("Done training")
     else:
         # load and evaluate the model
         if learning_method == "BC":
-            model = bc.reconstruct_policy("models/BC/4320.h5f")
+            model = bc.reconstruct_policy("models/BC/1_1_4288.h5f")
         else:
-            model = PPO.load(f"models/{learning_method}/384.h5f", env=env)
+            model = PPO.load(f"models/{learning_method}/1_1_384.h5f", env=env)
 
         rewards, _ = evaluate_policy(
             model=model,

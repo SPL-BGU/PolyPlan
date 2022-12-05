@@ -1,5 +1,4 @@
 from agents.polycraft_agent import PolycraftAgent
-from utils.decoder import Decoder
 import pickle
 from imitation.data import rollout
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -20,9 +19,9 @@ class LearningAgent(PolycraftAgent):
         """Return the action the delegate agent takes."""
         return self._agent.choose_action(state)
 
-    def expert(self, state) -> str:
+    def expert(self, state=None) -> str:
         action = self._agent.choose_action(state)
-        return [Decoder.encode_action_type(action)]
+        return [action]
 
     def record_trajectory(self, steps: int = 64) -> None:
         """Record the trajectory."""

@@ -58,28 +58,28 @@ class PolycraftGymEnv(Env):
 
         self._observation_space = GymDict(
             {
-                "blockInFront": Discrete(Decoder.get_blocks_size()),
+                "blockInFront": Discrete(Decoder.get_blocks_size()),  # 11
                 "gameMap": Box(
                     low=0,
-                    high=Decoder.get_blocks_size(),
+                    high=Decoder.get_blocks_size(),  # 11
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
-                ),  # map (32*32*2)and for each point (block) show name and isAccessible (2) as 1D vector
-                "goalAchieved": Discrete(2),
+                ),  # map (31*31*2)and for each point (block) show name and isAccessible
+                "goalAchieved": Discrete(2),  # 0 or 1
                 "inventory": Box(
                     low=0,
-                    high=Decoder.get_items_size(),
+                    high=Decoder.get_items_size(),  # 14
                     shape=(2 * 9,),
                     dtype=np.uint8,
-                ),  # 1 line of inventory (1*9) and for each item show name and count (2) as 1D vector
+                ),  # 1 line of inventory (2*8) and for each item show name and count
                 "pos": MultiDiscrete(
                     [32, 32]
-                ),  # map size + 1 to all, without y (up down movement)
+                ),  # map size (31*31), without y (up down movement)
             }
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(Decoder.get_actions_size())
+        self.action_space = Discrete(Decoder.get_actions_size())  # 24
 
         # current state start with all zeros
         self._state = OrderedDict(

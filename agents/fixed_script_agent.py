@@ -1,4 +1,5 @@
 from agents.polycraft_agent import PolycraftAgent
+from utils.decoder import Decoder
 
 
 class FixedScriptAgent(PolycraftAgent):
@@ -9,9 +10,10 @@ class FixedScriptAgent(PolycraftAgent):
         self._file = open(filename, "r")
 
     # overriding abstract method
-    def choose_action(self, state) -> str:
+    def choose_action(self, state=None) -> str:
         """Ignore the state and return the next action in the script"""
-        return self._read_script()
+        action = self._read_script()
+        return Decoder.encode_action_type(action)
 
     def _read_script(self) -> str:
         """Return the next action in the script."""
@@ -19,7 +21,11 @@ class FixedScriptAgent(PolycraftAgent):
 
         # if finished read the file again
         if not command:
-            self._file.seek(0)
+            self.reset_script()
             command = self._file.readline()
 
         return command[:-1]  # remove the newline character
+
+    def reset_script(self):
+        """Reset the script to the beginning"""
+        self._file.seek(0)

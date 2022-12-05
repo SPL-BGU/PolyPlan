@@ -20,8 +20,7 @@ def main():
         env.reset()  # reset the environment
 
         for _ in range(30):  # 30 is the number of commands in my_script.txt
-            action = fixed_script_agent.act()
-            print(action)
+            fixed_script_agent.act()
 
     env.close()  # close the environment
 
