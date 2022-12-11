@@ -2,13 +2,15 @@ import os
 import pickle
 import shutil
 
-from polycraft_gym_env import PolycraftGymEnv
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv
-
 import time
 import cProfile, pstats
 from stable_baselines3.common.evaluation import evaluate_policy
+
+from polycraft_gym_env import PolycraftGymEnv
+from polycraft_policy import PolycraftPolicy
+
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 from imitation.algorithms import bc
 from imitation.algorithms.adversarial.gail import GAIL
@@ -80,10 +82,16 @@ def main():
             os.makedirs(models_dir)
 
         if learning_method == "BC":
+            # policy
+            policy = PolycraftPolicy(
+                env.observation_space, env.action_space, lambda _: 3e-4
+            )
+
             # basic behavior cloning
             bc_trainer = bc.BC(
                 observation_space=env.observation_space,
                 action_space=env.action_space,
+                policy=policy,
                 demonstrations=rollouts,
             )
 
@@ -100,7 +108,7 @@ def main():
 
             # agent
             model = PPO(
-                "MlpPolicy",
+                PolycraftPolicy,
                 env,
                 verbose=1,
                 n_steps=epoch,
