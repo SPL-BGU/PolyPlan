@@ -1,10 +1,10 @@
-from utils.actions_type import *
+from utils.macro_actions import *
 from typing import Dict, List
 
 
 class Decoder:
-
-    actions_decoder: Dict[int, Dict[int, str]]
+    macro_actions: Dict[int, MacroAction]
+    actions_encoder: Dict[int, Dict[str, int]]
     actions_size: Dict[int, int]
     blocks_decoder: Dict[str, int]
     blocks_size: int
@@ -13,25 +13,22 @@ class Decoder:
     entitys_decoder: Dict[str, int]
     entitys_size: int
 
-    actions_decoder = {
-        0: NOP().actions,
-        1: Move().actions,
-        2: Turn().actions,
-        3: Break().actions,
-        4: TP().actions,
-        5: Craft().actions,
-        6: Collect().actions,
-        7: PlaceTreeTap().actions,
+    macro_actions = {
+        0: TP_Break_And_Collect(),
+        1: Craft(),
+        2: PlaceTreeTap(),
     }
+
+    actions_encoder = {
+        0: TP_Break_And_Collect().encoder,
+        1: Craft().encoder,
+        2: PlaceTreeTap().encoder,
+    }
+
     actions_size = {
-        0: 0,  # NOP is no action and start at 0
-        1: Move().length,
-        2: Turn().length,
-        3: Break().length,
-        4: TP().length,
-        5: Craft().length,
-        6: Collect().length,
-        7: PlaceTreeTap().length,
+        0: TP_Break_And_Collect().length,
+        1: Craft().length,
+        2: PlaceTreeTap().length,
     }
 
     blocks_decoder = {
@@ -75,36 +72,41 @@ class Decoder:
     entitys_size = len(entitys_decoder)
 
     @staticmethod
-    def update_actions(sense_all: Dict = None) -> None:
-        TP.update_actions(sense_all)
-        Decoder.actions_decoder[4] = TP().actions
+    def update_tp(sense_all: Dict) -> None:
+        TP_Update.update_actions(
+            sense_all,
+            Decoder.macro_actions[0],
+            Decoder.macro_actions[1],
+            Decoder.macro_actions[2],
+        )
 
     @staticmethod
     def decode_action_type(action: int) -> str:
+        if action >= Decoder.get_actions_size():
+            raise ValueError(f"decode not found action '{action}'")
+
         for index, size in Decoder.actions_size.items():
-            if action <= size:
-                return Decoder.actions_decoder[index][action]
+            if action < size:
+                break
             action -= size
 
-        raise ValueError(f"action '{action}' is out of range")
+        if index == 0:
+            return Decoder.macro_actions[0].next_location()
+
+        return Decoder.macro_actions[index].actions[action]
 
     @staticmethod
     def encode_action_type(action: str) -> int:
-        if action == "NOP":
-            return 0
-        for index, act in Decoder.actions_decoder.items():
-            if action in act.values():
-                return (
-                    list(act.values()).index(action)
-                    + sum(list(Decoder.actions_size.values())[:index])
-                    + 1
-                )
+        for i, dic in Decoder.actions_encoder.items():
+            for act, j in dic.items():
+                if action == act:
+                    return j + sum(list(Decoder.actions_size.values())[:i])
 
-        raise ValueError(f"action '{action}' not found")
+        raise ValueError(f"encode not found action '{action}'")
 
     @staticmethod
-    def get_actions_size() -> List[int]:
-        return sum(Decoder.actions_size.values()) + 1  # +1 for the NOP action
+    def get_actions_size() -> int:
+        return sum(Decoder.actions_size.values())
 
     @staticmethod
     def decode_block_type(name) -> int:

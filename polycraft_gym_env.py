@@ -79,7 +79,7 @@ class PolycraftGymEnv(Env):
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(Decoder.get_actions_size())  # 24
+        self.action_space = Discrete(Decoder.get_actions_size())  # 6
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -113,10 +113,11 @@ class PolycraftGymEnv(Env):
         info = {}
         self.rounds -= 1
 
-        command = Decoder.decode_action_type(action)
-        self.action = command
+        command_list = Decoder.decode_action_type(action)
+        self.action = command_list
 
-        self.server_controller.send_command(command)
+        for command in command_list:
+            self.server_controller.send_command(command)
 
         self._sense_all()  # update the state and get reward
 
@@ -146,7 +147,7 @@ class PolycraftGymEnv(Env):
 
         # reset the teleport according to the new domain
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
-        Decoder.update_actions(sense_all)
+        Decoder.update_tp(sense_all)
 
         # reset the state
         self.collected_reward = 0
