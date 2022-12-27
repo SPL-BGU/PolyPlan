@@ -6,6 +6,7 @@ import time
 import cProfile, pstats
 from stable_baselines3.common.evaluation import evaluate_policy
 
+import config as CONFIG
 from polycraft_gym_env import PolycraftGymEnv
 from polycraft_policy import PolycraftPolicy
 
@@ -77,7 +78,7 @@ def main():
         with open("expert_trajectory.pkl", "rb") as fp:
             rollouts = pickle.load(fp)
 
-        models_dir = f"models/{learning_method}"
+        models_dir = f"models/{learning_method}/{dir_index}"
         if not os.path.exists(models_dir):
             os.makedirs(models_dir)
 
@@ -136,6 +137,7 @@ def main():
                     log_dir=logdir,
                     init_tensorboard=True,
                     init_tensorboard_graph=True,
+                    allow_variable_horizon=True,
                 )
 
                 for i in range(1, train_time + 1):
@@ -151,18 +153,24 @@ def main():
     else:
         # load and evaluate the model
         if learning_method == "BC":
-            model = bc.reconstruct_policy("models/BC/1_1_4288.h5f")
+            model = bc.reconstruct_policy("models/BC/1/1_1_4288.h5f")
         else:
-            model = PPO.load(f"models/{learning_method}/1_1_384.h5f", env=env)
+            model = PPO.load(f"models/{learning_method}/1/1_1_384.h5f", env=env)
 
-        rewards, _ = evaluate_policy(
-            model=model,
-            env=env,
-            n_eval_episodes=10,
-            return_episode_rewards=True,
-            deterministic=False,
-        )
-        print("Rewards:", rewards)
+        avg = []
+        for domain_path in CONFIG.EVALUATION_DOMAINS_PATH:
+            env.set_domain(domain_path)
+            rewards, _ = evaluate_policy(
+                model=model,
+                env=env,
+                n_eval_episodes=10,
+                return_episode_rewards=True,
+                deterministic=False,
+            )
+            avg.append(sum(rewards) / len(rewards))
+
+        print("Average Reward:", avg)
+        print("Total Average Reward:", sum(avg) / len(avg))
 
     env.close()
 

@@ -1,7 +1,0 @@
-/home/benjamin/Downloads/pal/available_tests/pogo_nov_lvl-0_type-1.json
-/home/benjamin/Downloads/pal/available_tests/pogo_nov_lvl-0_type-2.json
-/home/benjamin/Downloads/pal/available_tests/pogo_nov_lvl-1_type-1.json
-/home/benjamin/Downloads/pal/available_tests/pogo_nov_lvl-2_type-1b.json
-/home/benjamin/Downloads/pal/available_tests/pogo_nov_lvl-3_type-1.json
-done
-/home/benjamin/Downloads/pal/available_tests/pogo_nonov.json

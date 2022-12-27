@@ -1,5 +1,5 @@
 from utils.macro_actions import *
-from typing import Dict, List
+from typing import Dict
 
 
 class Decoder:
@@ -20,15 +20,15 @@ class Decoder:
     }
 
     actions_encoder = {
-        0: TP_Break_And_Collect().encoder,
-        1: Craft().encoder,
-        2: PlaceTreeTap().encoder,
+        0: macro_actions[0].encoder,
+        1: macro_actions[1].encoder,
+        2: macro_actions[2].encoder,
     }
 
     actions_size = {
-        0: TP_Break_And_Collect().length,
-        1: Craft().length,
-        2: PlaceTreeTap().length,
+        0: macro_actions[0].length,
+        1: macro_actions[1].length,
+        2: macro_actions[2].length,
     }
 
     blocks_decoder = {
