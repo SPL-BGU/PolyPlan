@@ -76,6 +76,7 @@ class PolycraftGymEnv(Env):
                 "pos": MultiDiscrete(
                     [32, 32]
                 ),  # map size (31*31), without y (up down movement)
+                "facing": Discrete(4),  # 0: north, 1: east, 2: south, 3: west
             }
         )
         self.observation_space = flatten_space(self._observation_space)
@@ -96,6 +97,7 @@ class PolycraftGymEnv(Env):
                     dtype=np.uint8,
                 ),
                 "pos": np.array([0, 0]),
+                "facing": np.array([0]),
             }
         )
         self.state = flatten(self._observation_space, self._state)
@@ -208,6 +210,11 @@ class PolycraftGymEnv(Env):
         # location in map without y (up down movement)
         self._state["pos"][0] = sense_all["player"]["pos"][0]
         self._state["pos"][1] = sense_all["player"]["pos"][2]
+
+        # facing
+        self._state["facing"][0] = Decoder.directions_decoder[
+            sense_all["player"]["facing"]
+        ]
 
         # update the gameMap
         gameMap = np.zeros(

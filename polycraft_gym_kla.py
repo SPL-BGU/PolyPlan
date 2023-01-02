@@ -12,14 +12,14 @@ class PolycraftGymKLA(PolycraftGymEnv):
         k: k last actions to learn
     """
 
-    def __init__(self, k: int = 1, rounds: int = 13, **kwargs):
+    def __init__(self, k: int = 1, expert_actions: int = 13, **kwargs):
         # PolycraftGymEnv
         super().__init__(**kwargs)
-        self.max_rounds = rounds
-        self.rounds_left = rounds
+        self.max_rounds = expert_actions
+        self.rounds_left = expert_actions
 
         self.expert = FixedScriptAgent(self, "my_script.txt")
-        self.k = rounds - k
+        self.k = expert_actions - k
 
     def reset(self):
         # print(f"reward {self.reward}")

@@ -55,11 +55,11 @@ and then try again.
 > env.close() <br />
 * As used in playground.py
 3. If you like to train the agent to learn the last k actions of an environment: <br />
-*-* First, update "my_script.txt" as you like, and then
-> env = PolycraftGymEnvKLA(k, num_actions_of_expert, visually=True) <br />
+> env = PolycraftGymEnvKLA(k=1, expert_actions=13, visually=True) <br />
 > model = PPO("MlpPolicy", env, verbose=1) <br />
 > model.learn(total_timesteps=1000) <br />
 > env.close() <br />
+* You can update "my_script.txt" as you like, and set expert_actions to num of lines of the file
 4. To see the model learning results run the following command in the shell:
 > tensorboard --logdir logs
 * Need to run the model first from playground.py

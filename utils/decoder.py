@@ -12,6 +12,7 @@ class Decoder:
     items_size: int
     entitys_decoder: Dict[str, int]
     entitys_size: int
+    directions_decoder: Dict[str, int]
 
     macro_actions = {
         0: TP_Break_And_Collect(),
@@ -70,6 +71,8 @@ class Decoder:
         "EntityItem": 2,
     }
     entitys_size = len(entitys_decoder)
+
+    directions_decoder = {"NORTH": 0, "EAST": 1, "SOUTH": 2, "WEST": 3}
 
     @staticmethod
     def update_tp(sense_all: Dict) -> None:
@@ -131,3 +134,7 @@ class Decoder:
     @staticmethod
     def get_entitys_size() -> int:
         return Decoder.entitys_size
+    
+    @staticmethod
+    def decode_direction(direction) -> int:
+        return Decoder.directions_decoder[direction]
