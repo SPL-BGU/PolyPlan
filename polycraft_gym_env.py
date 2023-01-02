@@ -13,12 +13,13 @@ import config as CONFIG
 class PolycraftGymEnv(Env):
     """
     Create gym environment for polycraft
-    Where pal_path and domain_path must be updated in the config.py file to work
+    Where pal_path must be updated in the config.py file to work
 
     args:
         visually: if True, the environment will be displayed in the screen
         start_pal: if True, the pal will be started
         keep_alive: if True, the pal will be kept alive after the environment is closed
+        rounds: actions in the environment until reset
     """
 
     def __init__(
@@ -107,11 +108,11 @@ class PolycraftGymEnv(Env):
 
         # no. of rounds
         self.max_rounds = rounds
-        self.rounds = rounds
+        self.rounds_left = rounds
 
     def step(self, action: int) -> tuple:
         info = {}
-        self.rounds -= 1
+        self.rounds_left -= 1
 
         command_list = Decoder.decode_action_type(action)
         self.action = command_list
@@ -128,7 +129,7 @@ class PolycraftGymEnv(Env):
     def is_game_over(self) -> bool:
         done = False
 
-        if self.rounds == 0:
+        if self.rounds_left == 0:
             done = True
         else:
             done = bool(self._state["goalAchieved"])
@@ -154,11 +155,11 @@ class PolycraftGymEnv(Env):
         self.action = None
         self.done = False
         self._sense_all()
-        self.rounds = self.max_rounds
+        self.rounds_left = self.max_rounds
         return self.state
 
     def render(self) -> None:
-        print(f"Rounds Left: {self.rounds}")
+        print(f"Rounds Left: {self.rounds_left}")
         print(f"Action: {self.action}")
         # print(f"State: {self.state}")
         print(f"Reward: {self.reward}")

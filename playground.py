@@ -4,9 +4,10 @@ import shutil
 
 import time
 import cProfile, pstats
+import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
-import config as CONFIG
+# from polycraft_gym_kla import PolycraftGymEnvKLA
 from polycraft_gym_env import PolycraftGymEnv
 from polycraft_policy import PolycraftPolicy
 
@@ -24,6 +25,7 @@ def main():
 
     # only start pal
     # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=True)
+    # # env.reset()
     # env.close()
     # return
 
@@ -46,6 +48,7 @@ def main():
     # return
 
     env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
+    # env = PolycraftGymEnvKLA(visually=True, start_pal=True, keep_alive=False)
 
     training = True
     learning_method = ["BC", "PPO", "GAIL"][0]
