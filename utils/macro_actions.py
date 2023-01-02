@@ -28,14 +28,6 @@ class TP_Break_And_Collect(MacroAction):
         0: [
             "NOP",
             "BREAK_BLOCK",
-            "MOVE W",
-            "NOP",
-            "NOP",
-            "NOP",
-            "NOP",
-            "NOP",
-            "NOP",
-            "NOP",
         ]
     }
     class_encoder = {"GET TREE": 0}

@@ -8,7 +8,7 @@ I recommending to use ubuntu as an operating system or using wsl on windows. <br
 1. Make sure that Python 3.8 is installed and active (via [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment), conda environment or by using python3.8 instead of python commands).
 2. Make sure java8 is installed and active.
 3. Follow the installation of [pal](https://github.com/StephenGss/PAL/tree/release_2.0#Installation).
-* Note that the last checked working pal version with this project is [release 2.0 commit number 25d9af6](https://github.com/StephenGss/PAL/tree/25d9af6ed6d58693f96eae7927bb0852008afcfe).
+* Note that the last checked working pal version with this project is [release 2.0 commit number 5e326d4](https://github.com/StephenGss/PAL/tree/5e326d4bf9ffda156f1360b62a49a38ccefa2d43).
 
 ### Possible issues
 While installing pal, running the command ./setup_linux_headless.sh may cause an error that can be fixed by running the following command:
