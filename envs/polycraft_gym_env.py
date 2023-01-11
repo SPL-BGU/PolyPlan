@@ -5,8 +5,7 @@ from gym.spaces import flatten_space, flatten
 import sys, time, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
-from utils.server_controller import ServerController
-from utils.decoder import Decoder
+from utils import ServerController, Decoder
 import config as CONFIG
 
 

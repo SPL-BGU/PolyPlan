@@ -1,6 +1,4 @@
 from stable_baselines3.common.policies import ActorCriticPolicy
-import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR
 
 
 class PolycraftPolicy(ActorCriticPolicy):

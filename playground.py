@@ -7,8 +7,7 @@ import cProfile, pstats
 import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
-# from polycraft_gym_kla import PolycraftGymEnvKLA
-from polycraft_gym_env import PolycraftGymEnv
+from envs import PolycraftGymEnv as BasicMinecraft
 from polycraft_policy import PolycraftPolicy
 
 from stable_baselines3 import PPO
@@ -24,31 +23,12 @@ from imitation.util.networks import RunningNorm
 def main():
 
     # only start pal
-    # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=True)
+    # env = BasicMinecraft(visually=True, start_pal=True, keep_alive=True)
     # # env.reset()
     # env.close()
     # return
 
-    # basic
-    # env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=True)
-    # file = open("my_playground.txt", "r")
-    # domain_path = file.readline()
-    # # while domain_path != "done\n":
-    # for _ in range(1):
-    #     env.set_domain(domain_path)
-    #     for _ in range(1):
-    #         state = env.reset()
-    #         done = False
-    #         while not done:
-    #             action = env.action_space.sample()
-    #             state, reward, done, info = env.step(action)
-    #             env.render()
-    #     domain_path = file.readline()
-    # env.close()
-    # return
-
-    env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
-    # env = PolycraftGymEnvKLA(visually=True, start_pal=True, keep_alive=False)
+    env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
 
     training = True
     learning_method = ["BC", "PPO", "GAIL"][0]
@@ -58,9 +38,9 @@ def main():
     batch_size: int = 32
 
     if learning_method == "BC":
-        timesteps = 67 * epoch  # 4288 actions takes ~ 1 minute
+        timesteps = 32 * epoch  # 2048 actions takes ~ 1 minute
     else:
-        timesteps = 6 * epoch  # 384 actions takes ~ 1 minute
+        timesteps = 4 * epoch  # 256 actions takes ~ 1 minute
 
     if training:
 
@@ -156,9 +136,9 @@ def main():
     else:
         # load and evaluate the model
         if learning_method == "BC":
-            model = bc.reconstruct_policy("models/BC/1/1_1_4288.h5f")
+            model = bc.reconstruct_policy("models/BC/1/1_1_2048.h5f")
         else:
-            model = PPO.load(f"models/{learning_method}/1/1_1_384.h5f", env=env)
+            model = PPO.load(f"models/{learning_method}/1/1_1_256.h5f", env=env)
 
         avg = []
         for domain_path in CONFIG.EVALUATION_DOMAINS_PATH:
@@ -166,7 +146,7 @@ def main():
             rewards, _ = evaluate_policy(
                 model=model,
                 env=env,
-                n_eval_episodes=10,
+                n_eval_episodes=5,
                 return_episode_rewards=True,
                 deterministic=False,
             )

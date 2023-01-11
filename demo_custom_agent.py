@@ -1,11 +1,10 @@
-from polycraft_gym_env import PolycraftGymEnv
-from agents.learning_agent import LearningAgent
-from agents.fixed_script_agent import FixedScriptAgent
+from envs import PolycraftGymEnv as BasicMinecraft
+from agents import LearningAgent, FixedScriptAgent
 
 
 def main():
     # start the polycraft environment
-    env = PolycraftGymEnv(visually=True, start_pal=True, keep_alive=False)
+    env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
 
     fixed_script_agent = FixedScriptAgent(env, "my_script.txt")
 

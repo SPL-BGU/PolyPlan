@@ -1,4 +1,4 @@
-from polycraft_gym_env import PolycraftGymEnv
+from envs import PolycraftGymEnv
 from agents.fixed_script_agent import FixedScriptAgent
 
 
