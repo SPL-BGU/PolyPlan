@@ -44,12 +44,12 @@ and then try again.
 
 ## How to use the environment:
 1. To run only the Polycraft server you can use the following code: 
-> env = PolycraftGymEnv(visually=True, keep_alive=True) <br />
+> env = BasicMinecraft(visually=True, keep_alive=True) <br />
 > env.reset() <br />
 > env.close() <br />
 * As used in demo_custom_agent.py
 2. To run as a custom ai gym environment use the following code:
-> env = PolycraftGymEnv(visually=True) <br />
+> env = BasicMinecraft(visually=True) <br />
 > model = PPO("MlpPolicy", env, verbose=1) <br />
 > model.learn(total_timesteps=1000) <br />
 > env.close() <br />

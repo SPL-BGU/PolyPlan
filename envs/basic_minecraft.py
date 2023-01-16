@@ -26,8 +26,18 @@ class BasicMinecraft(PolycraftGymEnv):
         # basic minecraft environment observation space
         self._observation_space = GymDict(
             {
-                "treeCount": Discrete(5),  # count of trees in the map
-                "goalAchieved": Discrete(2),  # 0 or 1
+                "treeCount": Box(
+                    low=0,
+                    high=5,
+                    shape=(1,),
+                    dtype=np.uint8,
+                ),  # count of trees in the map
+                "goalAchieved": Box(
+                    low=0,
+                    high=2,
+                    shape=(1,),
+                    dtype=np.uint8,
+                ),  # 0 or 1
                 "inventory": Box(
                     low=0,
                     high=Decoder.get_items_size(),  # 18
@@ -43,8 +53,14 @@ class BasicMinecraft(PolycraftGymEnv):
         # current state start with all zeros
         self._state = OrderedDict(
             {
-                "treeCount": 0,
-                "goalAchieved": 0,
+                "treeCount": np.zeros(
+                    (1,),
+                    dtype=np.uint8,
+                ),
+                "goalAchieved": np.zeros(
+                    (1,),
+                    dtype=np.uint8,
+                ),
                 "inventory": np.zeros(
                     (9 * 2,),
                     dtype=np.uint8,
@@ -64,7 +80,7 @@ class BasicMinecraft(PolycraftGymEnv):
         count = 0
         for _, game_block in sense_all["map"].items():
             count += 1 if game_block["name"] == "minecraft:log" else 0
-        self._state["treeCount"] = int(count - 1)  # remove the tree_tap location
+        self._state["treeCount"][0] = int(count - 1)  # remove the tree_tap location
 
         # update the inventory
         inventory = np.zeros(
@@ -75,20 +91,19 @@ class BasicMinecraft(PolycraftGymEnv):
             if location == "selectedItem":
                 continue
             location = int(location)
-            # inventory[0][location] = location
             inventory[0][location] = Decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
         self._state[
             "inventory"
         ] = inventory.ravel()  # flatten the inventory to 1D vector
 
-        self._state["goalAchieved"] = (
+        self._state["goalAchieved"][0] = (
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )
 
         # update the reward
         self.reward = int(
-            self._state["goalAchieved"]
+            self._state["goalAchieved"][0]
         )  # binary reward - achieved the goal or not
         self.collected_reward += self.reward
 

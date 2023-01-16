@@ -9,9 +9,10 @@ def main():
     fixed_script_agent = FixedScriptAgent(env, "my_script.txt")
 
     recording = True
+    planning = False
 
     if recording:
-        learning_agent = LearningAgent(env, fixed_script_agent)
+        learning_agent = LearningAgent(env, fixed_script_agent, for_planning=planning)
 
         learning_agent.record_trajectory()
         learning_agent.export_trajectory()  # export the trajectory to a file name "expert_trajectory.pkl"

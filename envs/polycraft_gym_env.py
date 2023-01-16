@@ -1,5 +1,5 @@
 from gym import Env
-from gym.spaces import Box, Discrete, MultiDiscrete
+from gym.spaces import Box, Discrete
 from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import sys, time, queue, subprocess, threading
@@ -58,24 +58,42 @@ class PolycraftGymEnv(Env):
 
         self._observation_space = GymDict(
             {
-                "blockInFront": Discrete(Decoder.get_blocks_size()),  # 11
+                "blockInFront": Box(
+                    low=0,
+                    high=Decoder.get_blocks_size(),
+                    shape=(1,),
+                    dtype=np.uint8,
+                ),  # 11
                 "gameMap": Box(
                     low=0,
                     high=Decoder.get_blocks_size(),  # 11
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
                 ),  # map (32*32) and for each point (block) show name and isAccessible (*2)
-                "goalAchieved": Discrete(2),  # 0 or 1
+                "goalAchieved": Box(
+                    low=0,
+                    high=2,
+                    shape=(1,),
+                    dtype=np.uint8,
+                ),  # 0 or 1
                 "inventory": Box(
                     low=0,
                     high=Decoder.get_items_size(),  # 18
                     shape=(9 * 2,),
                     dtype=np.uint8,
                 ),  # 1 line of inventory (9) and for each item show name and count (*2)
-                "pos": MultiDiscrete(
-                    [32, 32]
+                "pos": Box(
+                    low=0,
+                    high=32,
+                    shape=(2,),
+                    dtype=np.uint8,
                 ),  # map size (32*32), without y (up down movement)
-                "facing": Discrete(4),  # 0: north, 1: east, 2: south, 3: west
+                "facing": Box(
+                    low=0,
+                    high=4,
+                    shape=(1,),
+                    dtype=np.uint8,
+                ),  # 0: north, 1: east, 2: south, 3: west
             }
         )
         self.observation_space = flatten_space(self._observation_space)
@@ -85,18 +103,30 @@ class PolycraftGymEnv(Env):
         # current state start with all zeros
         self._state = OrderedDict(
             {
-                "blockInFront": 0,
+                "blockInFront": np.zeros(
+                    (1,),
+                    dtype=np.uint8,
+                ),
                 "gameMap": np.zeros(
                     (32 * 32 * 2,),
                     dtype=np.uint8,
                 ),
-                "goalAchieved": 0,
+                "goalAchieved": np.zeros(
+                    (1,),
+                    dtype=np.uint8,
+                ),
                 "inventory": np.zeros(
                     (9 * 2,),
                     dtype=np.uint8,
                 ),
-                "pos": np.array([0, 0]),
-                "facing": np.array([0]),
+                "pos": np.zeros(
+                    (2,),
+                    dtype=np.uint8,
+                ),
+                "facing": np.zeros(
+                    (1,),
+                    dtype=np.uint8,
+                ),
             }
         )
         self.state = flatten(self._observation_space, self._state)
@@ -186,7 +216,7 @@ class PolycraftGymEnv(Env):
         # get the state from the Polycraft server
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
 
-        self._state["blockInFront"] = Decoder.decode_block_type(
+        self._state["blockInFront"][0] = Decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
         )
 
@@ -199,7 +229,6 @@ class PolycraftGymEnv(Env):
             if location == "selectedItem":
                 continue
             location = int(location)
-            # inventory[0][location] = location
             inventory[0][location] = Decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
         self._state[
@@ -228,13 +257,13 @@ class PolycraftGymEnv(Env):
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])
         self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
 
-        self._state["goalAchieved"] = (
+        self._state["goalAchieved"][0] = (
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )
 
         # update the reward
         self.reward = int(
-            self._state["goalAchieved"]
+            self._state["goalAchieved"][0]
         )  # binary reward - achieved the goal or not
         self.collected_reward += self.reward
 
