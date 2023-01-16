@@ -64,17 +64,17 @@ class PolycraftGymEnv(Env):
                     high=Decoder.get_blocks_size(),  # 11
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
-                ),  # map (31*31*2)and for each point (block) show name and isAccessible
+                ),  # map (32*32) and for each point (block) show name and isAccessible (*2)
                 "goalAchieved": Discrete(2),  # 0 or 1
                 "inventory": Box(
                     low=0,
-                    high=Decoder.get_items_size(),  # 14
-                    shape=(2 * 9,),
+                    high=Decoder.get_items_size(),  # 18
+                    shape=(9 * 2,),
                     dtype=np.uint8,
-                ),  # 1 line of inventory (2*8) and for each item show name and count
+                ),  # 1 line of inventory (9) and for each item show name and count (*2)
                 "pos": MultiDiscrete(
                     [32, 32]
-                ),  # map size (31*31), without y (up down movement)
+                ),  # map size (32*32), without y (up down movement)
                 "facing": Discrete(4),  # 0: north, 1: east, 2: south, 3: west
             }
         )
@@ -92,7 +92,7 @@ class PolycraftGymEnv(Env):
                 ),
                 "goalAchieved": 0,
                 "inventory": np.zeros(
-                    (2 * 9,),
+                    (9 * 2,),
                     dtype=np.uint8,
                 ),
                 "pos": np.array([0, 0]),
@@ -227,6 +227,7 @@ class PolycraftGymEnv(Env):
             )
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])
         self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
+
         self._state["goalAchieved"] = (
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )

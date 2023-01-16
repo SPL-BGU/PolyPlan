@@ -7,7 +7,7 @@ import cProfile, pstats
 import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from envs import PolycraftGymEnv as BasicMinecraft
+from envs import BasicMinecraft
 from polycraft_policy import PolycraftPolicy
 
 from stable_baselines3 import PPO
@@ -38,7 +38,7 @@ def main():
     batch_size: int = 32
 
     if learning_method == "BC":
-        timesteps = 32 * epoch  # 2048 actions takes ~ 1 minute
+        timesteps = 32 * epoch  # 2048 actions takes ~ 0.75 minute
     else:
         timesteps = 4 * epoch  # 256 actions takes ~ 1 minute
 

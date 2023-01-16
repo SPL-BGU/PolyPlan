@@ -1,4 +1,4 @@
-from envs import PolycraftGymEnv as BasicMinecraft
+from envs import BasicMinecraft
 from agents import LearningAgent, FixedScriptAgent
 
 
@@ -18,7 +18,7 @@ def main():
     else:
         env.reset()  # reset the environment
 
-        for _ in range(13):  # 13 is the number of commands in my_script.txt
+        for _ in range(11):  # 11 is the number of commands in my_script.txt
             fixed_script_agent.act()
 
     env.close()  # close the environment
