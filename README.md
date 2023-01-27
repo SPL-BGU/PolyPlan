@@ -59,7 +59,7 @@ and then try again.
 > python custom_agent.py 
 * The agent makes a wooden pogo from a list of commands (my_script.txt).
 4. If you like to train the agent to learn the last k actions of an environment use: <br />
-> env = PolycraftGymEnvKLA(k=1, expert_actions=13, visually=True) <br />
+> env = PolycraftGymEnvKLA(BasicMinecraft, k=1, expert_actions=11, visually=True) <br />
 * You can update "my_script.txt" as you like, and set expert_actions to num of lines of the file
 5. In order to start an planning agent:
 > enhsp = ENHSP()
