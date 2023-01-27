@@ -30,7 +30,7 @@ class TP_Break_And_Collect(MacroAction):
             "BREAK_BLOCK",
         ]
     }
-    class_encoder = {"GET TREE": 0}
+    class_encoder = {"GET_LOG": 0}
 
     def __init__(self):
         super().__init__()
@@ -63,10 +63,10 @@ class Craft(MacroAction):
         ],
     }
     class_encoder = {
-        "CRAFT PLANK": 0,
-        "CRAFT STICK": 1,
-        "CRAFT TREE_TAP": 2,
-        "CRAFT WOODEN_POGO": 3,
+        "CRAFT_PLANK": 0,
+        "CRAFT_STICK": 1,
+        "CRAFT_TREE_TAP": 2,
+        "CRAFT_WOODEN_POGO": 3,
     }
 
     def __init__(self):
@@ -81,7 +81,7 @@ class Craft(MacroAction):
 
 class PlaceTreeTap(MacroAction):
     class_actions = {0: ["NOP", "MOVE D", "PLACE_TREE_TAP", "COLLECT"]}
-    class_encoder = {"PLACE TREE_TAP": 0}
+    class_encoder = {"PLACE_TREE_TAP": 0}
 
     def __init__(self):
         super().__init__()

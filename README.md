@@ -33,33 +33,38 @@ and then try again.
 3. pip install all the requirements for this project:
 > python -m pip install -r requirements.txt
 
+4. Make sure java 15 or higher is installed in order to use the planner agent using ENHSP:
+> [Download link](https://drive.google.com/file/d/1jNq_RRaf5jilPGjX2BARYo6CNJAB-o5o/view)
 
 # Usage
 
-## How to launch your agent:
+## How to launch your first agent:
 1. You need to update the pal location in the config.py file
 2. Now you can run the demo agent with the following command: 
-> python demo_custom_agent.py 
-* The demo agent makes a wooden pogo from a list of commands (name my_script.txt). Also, you can record the expert trajectory and export it (to a file name expert_trajectory.pkl).
+> python demo.py 
+* The demo agent do random actions in order to solve the environment.
 
 ## How to use the environment:
 1. To run only the Polycraft server you can use the following code: 
 > env = BasicMinecraft(visually=True, keep_alive=True) <br />
 > env.reset() <br />
 > env.close() <br />
-* As used in demo_custom_agent.py
-2. To run as a custom ai gym environment use the following code:
+2. To run as a custom RL agent use the following code:
 > env = BasicMinecraft(visually=True) <br />
 > model = PPO("MlpPolicy", env, verbose=1) <br />
 > model.learn(total_timesteps=1000) <br />
 > env.close() <br />
 * As used in playground.py
-3. If you like to train the agent to learn the last k actions of an environment: <br />
+3. If you like to export the expert trajectories for planning or behavioural cloning:
+> python custom_agent.py 
+* The agent makes a wooden pogo from a list of commands (my_script.txt).
+4. If you like to train the agent to learn the last k actions of an environment use: <br />
 > env = PolycraftGymEnvKLA(k=1, expert_actions=13, visually=True) <br />
-> model = PPO("MlpPolicy", env, verbose=1) <br />
-> model.learn(total_timesteps=1000) <br />
-> env.close() <br />
 * You can update "my_script.txt" as you like, and set expert_actions to num of lines of the file
-4. To see the model learning results run the following command in the shell:
+5. In order to start an planning agent:
+> enhsp = ENHSP()
+> plan = enhsp.create_plan()
+> model = FixedScriptAgent(env, script=plan)
+* You need to update the ENHSP location in the config.py file and change the java version accordingly
+6. To see the model learning results run the following command in a shell:
 > tensorboard --logdir logs
-* Need to run the model first from playground.py

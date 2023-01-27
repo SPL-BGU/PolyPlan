@@ -24,3 +24,7 @@ class PolycraftAgent(ABC):
         action = self.choose_action(state)
         self.env.step(action)
         return action
+
+    def predict(self, observations, state, episode_start, deterministic) -> str:
+        """Wrapper for gym predict function."""
+        return [self.choose_action(state)], [state]
