@@ -15,27 +15,34 @@ from agents import FixedScriptAgent
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 from imitation.algorithms import bc
 from imitation.algorithms.adversarial.gail import GAIL
 from imitation.data.wrappers import RolloutInfoWrapper
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.networks import RunningNorm
+from imitation.util import logger as imit_logger
 
 
-def train_rl_agent(env, learning_method: str, train_time: int):
-    """Train RL agent using PPO, BC, or GAIL"""
+def train_rl_agent(
+    env,
+    learning_method: str,
+    timesteps: int = 1024,
+    epoch: int = 256,
+    batch_size: int = 64,
+):
+    """Train RL agent using PPO, BC, or GAIL
+
+    Args:
+        learning_method (str): one of "BC", "PPO", "GAIL"
+        timesteps (int, optional): number of timesteps to train. Defaults to 1024.
+        epoch (int, optional): how much steps to until update the net. Defaults to 256.
+        batch_size (int, optional): size of the sub-updated in each epoch. Defaults to 64.
+    """
 
     if learning_method not in ["BC", "PPO", "GAIL"]:
         raise ValueError("learning method must be one of BC, PPO, GAIL")
-
-    epoch: int = 256  # 64 256 # how much steps to update the net
-    batch_size: int = 64  # 32 64 # size of sub-update from the total update size
-
-    if learning_method == "BC":
-        timesteps = 8 * epoch  # 2048 actions takes ~ 0.75 minute
-    else:
-        timesteps = epoch  # 256 actions takes ~ 1 minute
 
     # make log directory
     logdir = f"logs/{learning_method}"
@@ -64,17 +71,11 @@ def train_rl_agent(env, learning_method: str, train_time: int):
             observation_space=env.observation_space,
             action_space=env.action_space,
             demonstrations=rollouts,
+            custom_logger=imit_logger.configure(folder=logdir),
         )  # using default policy for better performance
 
-        for i in range(1, train_time + 1):
-            bc_trainer.train(n_epochs=timesteps)
-            bc_trainer.save_policy(f"{models_dir}/{dir_index}_{i}_{timesteps}.h5f")
-
-            # save log
-            shutil.copy(
-                f"{bc_trainer.logger.get_dir()}/progress.csv",
-                f"{logdir}/progress_{i}.csv",
-            )
+        bc_trainer.train(n_epochs=timesteps)
+        bc_trainer.save_policy(f"{models_dir}/BC_{timesteps}_steps.zip")
     else:
 
         # agent
@@ -100,7 +101,7 @@ def train_rl_agent(env, learning_method: str, train_time: int):
             )
             gail_trainer = GAIL(
                 demonstrations=rollouts,
-                demo_batch_size=batch_size,
+                demo_batch_size=11,
                 gen_replay_buffer_capacity=buffer_size,
                 venv=venv,
                 gen_algo=model,
@@ -109,16 +110,48 @@ def train_rl_agent(env, learning_method: str, train_time: int):
                 init_tensorboard=True,
                 init_tensorboard_graph=True,
                 allow_variable_horizon=True,
+                custom_logger=imit_logger.configure(folder=logdir),
             )
 
-            for i in range(1, train_time + 1):
-                gail_trainer.train(timesteps)
-                model.save(f"{models_dir}/{dir_index}_{i}_{timesteps}.h5f")
+            checkpoint_callback = CheckpointCallback(
+                save_freq=1,
+                save_path=f"{models_dir}/",
+                name_prefix="GAIL",
+            )
+
+            checkpoint_callback.model = model
+            last_rewards = []
+            f = open(f"{logdir}/reward_over_time.txt", "w")
+
+            def gail_callback(steps: int):
+                reward, _ = evaluate_policy(
+                    model=model,
+                    env=env,
+                    n_eval_episodes=1,
+                    return_episode_rewards=True,
+                )
+                last_rewards.append(reward[0])
+                if ((steps + 1) * epoch) % 1024 == 0:
+                    checkpoint_callback.on_step()
+                    f.write(str(sum(last_rewards) / len(last_rewards)) + "\n")
+                    last_rewards.clear()
+
+            gail_trainer.train(
+                total_timesteps=timesteps,
+                callback=gail_callback,
+            )
+            f.close()
         else:
+            # checkpoint callback
+            checkpoint_callback = CheckpointCallback(
+                save_freq=1024, save_path=f"{models_dir}/", name_prefix="PPO"
+            )
+
             # RL using PPO
-            for i in range(1, train_time + 1):
-                model.learn(total_timesteps=timesteps, reset_num_timesteps=False)
-                model.save(f"{models_dir}/{dir_index}_{i}_{timesteps}.h5f")
+            model.learn(
+                total_timesteps=timesteps,
+                callback=checkpoint_callback,
+            )
 
     print("Done training")
 
@@ -144,24 +177,25 @@ def evaluate(env, model):
 def main():
     # only start pal
     # env = BasicMinecraft(visually=True, start_pal=True, keep_alive=True)
-    # # env.reset()
+    # env.reset()
     # env.close()
     # return
 
     env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
     learning_method = ["BC", "PPO", "GAIL"][0]
-    train_time: int = 1  # time in minutes
+    timesteps: int = 1024
 
-    train_rl_agent(env, learning_method, train_time)
+    train_rl_agent(env, learning_method, timesteps)
 
     # load and evaluate the model
     # if learning_method == "BC":
-    #     model = bc.reconstruct_policy("models/BC/1/1_1_2048.h5f")
+    #     model = bc.reconstruct_policy("models/BC/1/BC_1024_steps.zip")
     # else:
-    #     model = PPO.load(f"models/{learning_method}/1/1_1_256.h5f", env=env)
+    #     model = PPO.load(f"models/{learning_method}/1/PPO_1024_steps.zip", env=env)
 
     # enhsp = ENHSP()
     # plan = enhsp.create_plan()
+    # # print(plan)
     # model = FixedScriptAgent(env, script=plan)
 
     # evaluate(env, model)

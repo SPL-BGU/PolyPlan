@@ -34,14 +34,14 @@ and then try again.
 > python -m pip install -r requirements.txt
 
 4. Make sure java 15 or higher is installed in order to use the planner agent using ENHSP:
-> [Download link](https://drive.google.com/file/d/1jNq_RRaf5jilPGjX2BARYo6CNJAB-o5o/view)
+> [Download link for ENHSP](https://drive.google.com/file/d/1jNq_RRaf5jilPGjX2BARYo6CNJAB-o5o/view)
 
 # Usage
 
 ## How to launch your first agent:
 1. You need to update the pal location in the config.py file
 2. Now you can run the demo agent with the following command: 
-> python demo.py 
+> python demo.py
 * The demo agent do random actions in order to solve the environment.
 
 ## How to use the environment:
@@ -56,15 +56,15 @@ and then try again.
 > env.close() <br />
 * As used in playground.py
 3. If you like to export the expert trajectories for planning or behavioural cloning:
-> python custom_agent.py 
+> python custom_agent.py
 * The agent makes a wooden pogo from a list of commands (my_script.txt).
-4. If you like to train the agent to learn the last k actions of an environment use: <br />
-> env = PolycraftGymEnvKLA(BasicMinecraft, k=1, expert_actions=11, visually=True) <br />
+4. If you like to train the agent to learn the last k actions of an environment use:
+> env = PolycraftGymEnvKLA(BasicMinecraft, k=1, expert_actions=11, visually=True)
 * You can update "my_script.txt" as you like, and set expert_actions to num of lines of the file
 5. In order to start an planning agent:
-> enhsp = ENHSP()
-> plan = enhsp.create_plan()
-> model = FixedScriptAgent(env, script=plan)
+> enhsp = ENHSP() <br />
+> plan = enhsp.create_plan() <br />
+> model = FixedScriptAgent(env, script=plan) <br />
 * You need to update the ENHSP location in the config.py file and change the java version accordingly
 6. To see the model learning results run the following command in a shell:
 > tensorboard --logdir logs
