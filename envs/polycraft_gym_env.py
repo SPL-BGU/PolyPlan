@@ -70,12 +70,6 @@ class PolycraftGymEnv(Env):
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
                 ),  # map (32*32) and for each point (block) show name and isAccessible (*2)
-                "goalAchieved": Box(
-                    low=0,
-                    high=2,
-                    shape=(1,),
-                    dtype=np.uint8,
-                ),  # 0 or 1
                 "inventory": Box(
                     low=0,
                     high=Decoder.get_items_size(),  # 18
@@ -109,10 +103,6 @@ class PolycraftGymEnv(Env):
                 ),
                 "gameMap": np.zeros(
                     (32 * 32 * 2,),
-                    dtype=np.uint8,
-                ),
-                "goalAchieved": np.zeros(
-                    (1,),
                     dtype=np.uint8,
                 ),
                 "inventory": np.zeros(
@@ -158,13 +148,7 @@ class PolycraftGymEnv(Env):
         return self.state, float(self.reward), done, info
 
     def is_game_over(self) -> bool:
-        done = False
-
-        if self.rounds_left == 0:
-            done = True
-        else:
-            done = bool(self._state["goalAchieved"])
-
+        done = bool(self.reward) or (self.rounds_left == 0)
         self.done = done
         return done
 
@@ -257,14 +241,10 @@ class PolycraftGymEnv(Env):
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])
         self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
 
-        self._state["goalAchieved"][0] = (
+        # update the reward, binary reward - achieved the goal or not
+        self.reward = (
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )
-
-        # update the reward
-        self.reward = int(
-            self._state["goalAchieved"][0]
-        )  # binary reward - achieved the goal or not
         self.collected_reward += self.reward
 
         self.state = flatten(self._observation_space, self._state)

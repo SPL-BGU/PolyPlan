@@ -32,12 +32,6 @@ class BasicMinecraft(PolycraftGymEnv):
                     shape=(1,),
                     dtype=np.uint8,
                 ),  # count of trees in the map
-                "goalAchieved": Box(
-                    low=0,
-                    high=2,
-                    shape=(1,),
-                    dtype=np.uint8,
-                ),  # 0 or 1
                 "inventory": Box(
                     low=0,
                     high=Decoder.get_items_size(),  # 18
@@ -54,10 +48,6 @@ class BasicMinecraft(PolycraftGymEnv):
         self._state = OrderedDict(
             {
                 "treeCount": np.zeros(
-                    (1,),
-                    dtype=np.uint8,
-                ),
-                "goalAchieved": np.zeros(
                     (1,),
                     dtype=np.uint8,
                 ),
@@ -97,14 +87,10 @@ class BasicMinecraft(PolycraftGymEnv):
             "inventory"
         ] = inventory.ravel()  # flatten the inventory to 1D vector
 
-        self._state["goalAchieved"][0] = (
+        # update the reward, binary reward - achieved the goal or not
+        self.reward = (
             int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
         )
-
-        # update the reward
-        self.reward = int(
-            self._state["goalAchieved"][0]
-        )  # binary reward - achieved the goal or not
         self.collected_reward += self.reward
 
         self.state = flatten(self._observation_space, self._state)

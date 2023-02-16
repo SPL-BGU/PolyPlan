@@ -33,7 +33,9 @@ class ENHSP:
                 while "Plan-Length" not in line:
                     try:
                         start = line.index("(") + 1
-                        end = line.index(")") - 1
+                        end = line.index(")")
+                        if line[end - 1] == " ":
+                            end -= 1
                         line = line[start:end]
                         plan.append(line)
                         # print(line)
