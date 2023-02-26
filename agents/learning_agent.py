@@ -15,8 +15,7 @@ class LearningAgent(PolycraftAgent):
         self.for_planning = for_planning
 
         self._rollouts = None
-        self._record = {}
-        self._no_action = 0
+        self._record = []
 
     # overriding abstract method
     def choose_action(self, state) -> str:
@@ -38,22 +37,10 @@ class LearningAgent(PolycraftAgent):
         else:  # record trajectory for planning algorithms
             state = self.env.reset()
             done = False
-            self._record[self._no_action] = {"state": state.tolist()}
-            self._no_action += 1
             while not done:
                 action = self.choose_action(state)
-                self._store_action(action)
+                self._record.append(self.env.decoder.decode_to_planning(action))
                 state, _, done, _ = self.env.step(action)
-                self._store_state(state)
-
-    def _store_state(self, state):
-        """Store the agent state."""
-        self._record[self._no_action]["state"] = state.tolist()
-        self._no_action += 1
-
-    def _store_action(self, action):
-        """Store the agent's action corresponds to his state."""
-        self._record[self._no_action] = {"action": action}
 
     def export_trajectory(self, filename: str = "expert_trajectory.pkl") -> None:
         """Export the trajectory to a file."""
@@ -62,4 +49,5 @@ class LearningAgent(PolycraftAgent):
                 pickle.dump(self._rollouts, fp)
         else:
             with open(filename, "w") as fp:
-                json.dump(self._record, fp)
+                for action in self._record:
+                    fp.write(f"({action})\n")

@@ -82,6 +82,7 @@ class MacroActionsDecoder:
         self.tree_locations = TP_Update.update_actions(sense_all, self.macro_actions[1])
 
     def decode_action_type(self, action: int) -> str:
+        """Decode the action type from int to polycraft action string"""
         if action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{action}'")
 
@@ -100,12 +101,22 @@ class MacroActionsDecoder:
         return self.macro_actions[index].actions[action]
 
     def encode_action_type(self, action: str) -> int:
+        """Encode the action type from planning level string to int"""
         for i, dic in self.actions_encoder.items():
             for act, j in dic.items():
                 if action == act:
                     return j + sum(list(self.actions_size.values())[:i])
 
         raise ValueError(f"encode not found action '{action}'")
+
+    def decode_to_planning(self, action: int) -> str:
+        """Decode the action type from int to planning level string"""
+        for i, dic in self.actions_encoder.items():
+            for act, j in dic.items():
+                if j + sum(list(self.actions_size.values())[:i]) == action:
+                    return act
+
+        raise ValueError(f"decode to planning not found action '{action}'")
 
     def get_actions_size(self) -> int:
         return sum(self.actions_size.values())
