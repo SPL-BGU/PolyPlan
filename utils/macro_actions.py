@@ -36,17 +36,9 @@ class TP_Break_And_Collect(MacroAction):
         super().__init__()
         self._actions = TP_Break_And_Collect.class_actions
         self._encoder = TP_Break_And_Collect.class_encoder
-        self.tree_locations = []
 
-    def update(self, locations: list) -> None:
-        self.tree_locations = locations
-
-    def next_location(self) -> List[str]:
-        if self.tree_locations:
-            self._actions[0][0] = f"TP_TO {self.tree_locations.pop(0)}"
-            return self._actions[0]
-        else:
-            return ["NOP"]
+    def update(self, location: str) -> None:
+        self._actions[0][0] = f"TP_TO {location}"
 
 
 class Craft(MacroAction):
@@ -96,9 +88,7 @@ class TP_Update:
     @staticmethod
     def update_actions(
         sense_all: Dict,
-        tree_chop: TP_Break_And_Collect,
         craft: Craft,
-        place_treetap: PlaceTreeTap,
     ) -> None:
         tree_locations = []
         crafting_table_location = "NOP"
@@ -110,9 +100,6 @@ class TP_Update:
             elif block["name"] == "minecraft:crafting_table":
                 crafting_table_location = location
 
-        random.shuffle(tree_locations)  # add randomness to the order
-
         # update the actions
         craft.update(crafting_table_location)
-        place_treetap.update(tree_locations.pop(0))
-        tree_chop.update(tree_locations)
+        return tree_locations

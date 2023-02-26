@@ -1,5 +1,4 @@
 from agents.polycraft_agent import PolycraftAgent
-from utils.decoder import Decoder
 
 
 class FixedScriptAgent(PolycraftAgent):
@@ -19,7 +18,7 @@ class FixedScriptAgent(PolycraftAgent):
     def choose_action(self, state=None) -> str:
         """Ignore the state and return the next action in the script"""
         action = self._next_action()
-        return Decoder.encode_action_type(action)
+        return self.env.decoder.encode_action_type(action)
 
     def _next_action(self) -> str:
         """Return the next action in the script."""

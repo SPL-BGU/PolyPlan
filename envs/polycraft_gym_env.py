@@ -5,7 +5,8 @@ from gym.spaces import flatten_space, flatten
 import sys, time, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
-from utils import ServerController, Decoder
+from utils import ServerController
+from utils import MacroActionsDecoder
 import config as CONFIG
 
 
@@ -56,23 +57,25 @@ class PolycraftGymEnv(Env):
         # openai gym environment
         super().__init__()
 
+        self.decoder = MacroActionsDecoder()
+
         self._observation_space = GymDict(
             {
                 "blockInFront": Box(
                     low=0,
-                    high=Decoder.get_blocks_size(),
+                    high=self.decoder.get_blocks_size(),
                     shape=(1,),
                     dtype=np.uint8,
                 ),  # 11
                 "gameMap": Box(
                     low=0,
-                    high=Decoder.get_blocks_size(),  # 11
+                    high=self.decoder.get_blocks_size(),  # 11
                     shape=(32 * 32 * 2,),
                     dtype=np.uint8,
                 ),  # map (32*32) and for each point (block) show name and isAccessible (*2)
                 "inventory": Box(
                     low=0,
-                    high=Decoder.get_items_size(),  # 18
+                    high=self.decoder.get_items_size(),  # 18
                     shape=(9 * 2,),
                     dtype=np.uint8,
                 ),  # 1 line of inventory (9) and for each item show name and count (*2)
@@ -92,7 +95,7 @@ class PolycraftGymEnv(Env):
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(Decoder.get_actions_size())  # 6
+        self.action_space = Discrete(self.decoder.get_actions_size())  # 6
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -135,7 +138,7 @@ class PolycraftGymEnv(Env):
         info = {}
         self.rounds_left -= 1
 
-        command_list = Decoder.decode_action_type(action)
+        command_list = self.decoder.decode_action_type(action)
         self.action = command_list
 
         for command in command_list:
@@ -163,7 +166,7 @@ class PolycraftGymEnv(Env):
 
         # reset the teleport according to the new domain
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
-        Decoder.update_tp(sense_all)
+        self.decoder.update_tp(sense_all)
 
         # reset the state
         self.collected_reward = 0
@@ -200,7 +203,7 @@ class PolycraftGymEnv(Env):
         # get the state from the Polycraft server
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
 
-        self._state["blockInFront"][0] = Decoder.decode_block_type(
+        self._state["blockInFront"][0] = self.decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
         )
 
@@ -213,7 +216,7 @@ class PolycraftGymEnv(Env):
             if location == "selectedItem":
                 continue
             location = int(location)
-            inventory[0][location] = Decoder.decode_item_type(item["item"])
+            inventory[0][location] = self.decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
         self._state[
             "inventory"
@@ -224,7 +227,7 @@ class PolycraftGymEnv(Env):
         self._state["pos"][1] = sense_all["player"]["pos"][2]
 
         # facing
-        self._state["facing"][0] = Decoder.directions_decoder[
+        self._state["facing"][0] = self.decoder.directions_decoder[
             sense_all["player"]["facing"]
         ]
 
@@ -235,7 +238,7 @@ class PolycraftGymEnv(Env):
         )
         for location, game_block in sense_all["map"].items():
             location = [int(i) for i in location.split(",")]
-            gameMap[location[0]][location[2]][0] = Decoder.decode_block_type(
+            gameMap[location[0]][location[2]][0] = self.decoder.decode_block_type(
                 game_block["name"]
             )
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])

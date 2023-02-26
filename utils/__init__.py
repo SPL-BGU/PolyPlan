@@ -1,2 +1,2 @@
-from utils.decoder import Decoder
+from utils.macro_actions_decoder import MacroActionsDecoder
 from utils.server_controller import ServerController

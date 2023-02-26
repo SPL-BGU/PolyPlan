@@ -19,7 +19,7 @@ def main():
     else:
         env.reset()  # reset the environment
 
-        for _ in range(11):  # 11 is the number of commands in my_script.txt
+        while not env.done:
             fixed_script_agent.act()
 
     env.close()  # close the environment

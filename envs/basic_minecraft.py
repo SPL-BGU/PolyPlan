@@ -4,7 +4,6 @@ from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
-from utils import Decoder
 
 
 class BasicMinecraft(PolycraftGymEnv):
@@ -34,7 +33,7 @@ class BasicMinecraft(PolycraftGymEnv):
                 ),  # count of trees in the map
                 "inventory": Box(
                     low=0,
-                    high=Decoder.get_items_size(),  # 18
+                    high=self.decoder.get_items_size(),  # 18
                     shape=(9 * 2,),
                     dtype=np.uint8,
                 ),  # 1 line of inventory (9) and for each item show name and count (*2)
@@ -42,7 +41,7 @@ class BasicMinecraft(PolycraftGymEnv):
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(Decoder.get_actions_size())  # 6
+        self.action_space = Discrete(self.decoder.get_actions_size())  # 6
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -67,10 +66,10 @@ class BasicMinecraft(PolycraftGymEnv):
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
 
         # update the treeCount
-        count = 0
+        count: int = 0
         for _, game_block in sense_all["map"].items():
             count += 1 if game_block["name"] == "minecraft:log" else 0
-        self._state["treeCount"][0] = int(count - 1)  # remove the tree_tap location
+        self._state["treeCount"][0] = count
 
         # update the inventory
         inventory = np.zeros(
@@ -81,7 +80,7 @@ class BasicMinecraft(PolycraftGymEnv):
             if location == "selectedItem":
                 continue
             location = int(location)
-            inventory[0][location] = Decoder.decode_item_type(item["item"])
+            inventory[0][location] = self.decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
         self._state[
             "inventory"
