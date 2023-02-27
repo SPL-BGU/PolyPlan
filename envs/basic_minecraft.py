@@ -4,6 +4,7 @@ from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
+from utils import MacroActionsDecoder
 
 
 class BasicMinecraft(PolycraftGymEnv):
@@ -20,7 +21,7 @@ class BasicMinecraft(PolycraftGymEnv):
 
     def __init__(self, **kwargs):
         # PolycraftGymEnv
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, decoder=MacroActionsDecoder())
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(

@@ -6,7 +6,7 @@ def main():
     # start the polycraft environment
     env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
 
-    fixed_script_agent = FixedScriptAgent(env, filename="my_script.txt")
+    fixed_script_agent = FixedScriptAgent(env, filename="macro_actions_script.txt")
 
     recording = True
     planning = False

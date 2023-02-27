@@ -1,5 +1,4 @@
 from typing import Dict, List
-import random
 
 
 class MacroAction:
@@ -9,6 +8,7 @@ class MacroAction:
 
     def __init__(self):
         self._actions = None
+        self._encoder = None
 
     @property
     def actions(self) -> Dict[int, str]:

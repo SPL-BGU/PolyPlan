@@ -1,13 +1,14 @@
 from gym import Env
-from gym.spaces import Box, Discrete
+from gym.spaces import Box, MultiDiscrete
 from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import sys, time, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
 from utils import ServerController
-from utils import MacroActionsDecoder
+from utils import ActionsDecoder, SingleActionDecoder
 import config as CONFIG
+from typing import Union, List
 
 
 class PolycraftGymEnv(Env):
@@ -28,6 +29,7 @@ class PolycraftGymEnv(Env):
         start_pal: bool = True,
         keep_alive: bool = False,
         rounds: int = 64,
+        decoder: ActionsDecoder = SingleActionDecoder(),
     ):
 
         # start polycraft server
@@ -57,7 +59,7 @@ class PolycraftGymEnv(Env):
         # openai gym environment
         super().__init__()
 
-        self.decoder = MacroActionsDecoder()
+        self.decoder = decoder
 
         self._observation_space = GymDict(
             {
@@ -95,7 +97,9 @@ class PolycraftGymEnv(Env):
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(self.decoder.get_actions_size())  # 6
+        self.action_space = MultiDiscrete(
+            [self.decoder.get_actions_size(), 32, 32]
+        )  # 15, 32, 32 -> action, x_pos, z_pos
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -134,7 +138,7 @@ class PolycraftGymEnv(Env):
         self.max_rounds = rounds
         self.rounds_left = rounds
 
-    def step(self, action: int) -> tuple:
+    def step(self, action: Union[List[int], int]) -> tuple:
         info = {}
         self.rounds_left -= 1
 
