@@ -57,9 +57,10 @@ def train_rl_agent(
 
     print("Start training")
 
-    # load expert trajectory
-    with open("expert_trajectory.pkl", "rb") as fp:
-        rollouts = pickle.load(fp)
+    if learning_method != "PPO":
+        # load expert trajectory
+        with open("expert_trajectory.pkl", "rb") as fp:
+            rollouts = pickle.load(fp)
 
     models_dir = f"models/{learning_method}/{dir_index}"
     if not os.path.exists(models_dir):

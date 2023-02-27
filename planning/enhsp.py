@@ -12,13 +12,18 @@ class ENHSP:
     def __init__(self):
         self.path = CONFIG.ENHSP_PLANNER_PATH
 
-    def create_plan(self) -> list:
+    def create_plan(
+        self,
+        domain="basic_minecraft_domain.pddl",
+        problem="basic_minecraft_problem.pddl",
+    ) -> list:
         """
         Create a plan for the given domain and problem
+        :param domain: the domain file - must be located in the planning folder
+        :param problem: the problem file - must be located in the planning folder
         """
 
-        # f"java -jar enhsp.jar -o basic_minecraft_domain.pddl -f basic_minecraft_problem.pddl"
-        cmd = f"java -jar {self.path}/enhsp.jar -o {os. getcwd()}/planning/basic_minecraft_domain.pddl -f {os. getcwd()}/planning/basic_minecraft_problem.pddl"
+        cmd = f"java -jar {self.path}/enhsp.jar -o {os. getcwd()}/planning/{domain} -f {os. getcwd()}/planning/{problem}"
 
         planner = subprocess.Popen(
             "exec " + cmd,

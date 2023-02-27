@@ -6,7 +6,7 @@
 
 (:init
     ; Map
-    (= (trees_in_map) 4)
+    (= (trees_in_map) 5)
 
     ; Items
     (= (count_platinum_in_inventory) 0)
