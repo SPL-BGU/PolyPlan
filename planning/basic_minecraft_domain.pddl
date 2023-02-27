@@ -9,16 +9,8 @@
     (trees_in_map)
 
     ; Items
-    (count_platinum_in_inventory)
-    (count_titanium_in_inventory)
-    (count_crafting_table_in_inventory)
-    (count_diamond_in_inventory)
-    (count_diamond_block_in_inventory)
-    (count_iron_pickaxe_in_inventory)
-    (count_key_in_inventory)
     (count_log_in_inventory)
     (count_planks_in_inventory)
-    (count_sapling_in_inventory)
     (count_stick_in_inventory)
     (count_sack_polyisoprene_pellets_in_inventory)
     (count_tree_tap_in_inventory)
@@ -90,6 +82,7 @@
 (:action PLACE_TREE_TAP
     :parameters ()
     :precondition (and
+        (> (trees_in_map) 0)
         (> (count_tree_tap_in_inventory) 0)
     )
     :effect (and
