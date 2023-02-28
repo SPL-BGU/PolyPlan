@@ -8,7 +8,7 @@ class RandomAgent(PolycraftAgent):
         super().__init__(env)
 
     # overriding abstract method
-    def choose_action(self, state=None) -> str:
+    def choose_action(self, state=None) -> int:
         """Ignore the state and return random action"""
         action = self.env.action_space.sample()
         return action

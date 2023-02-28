@@ -18,7 +18,7 @@ class LearningAgent(PolycraftAgent):
         self._record = []
 
     # overriding abstract method
-    def choose_action(self, state) -> str:
+    def choose_action(self, state) -> int:
         """Return the action the delegate agent takes."""
         return self._agent.choose_action(state)
 

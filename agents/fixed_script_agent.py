@@ -15,7 +15,7 @@ class FixedScriptAgent(PolycraftAgent):
         self._current_action = 0
 
     # overriding abstract method
-    def choose_action(self, state=None) -> str:
+    def choose_action(self, state=None) -> int:
         """Ignore the state and return the next action in the script"""
         action = self._next_action()
         return self.env.decoder.encode_action_type(action)
