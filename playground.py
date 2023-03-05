@@ -8,12 +8,12 @@ import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
 from envs import BasicMinecraft
-from polycraft_policy import PolycraftPolicy
+from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
 
 from planning.enhsp import ENHSP
 from agents import FixedScriptAgent
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
 
@@ -41,8 +41,8 @@ def train_rl_agent(
         batch_size (int, optional): size of the sub-updated in each epoch. Defaults to 64.
     """
 
-    if learning_method not in ["BC", "PPO", "GAIL"]:
-        raise ValueError("learning method must be one of BC, PPO, GAIL")
+    if learning_method not in ["BC", "DQN", "PPO", "GAIL"]:
+        raise ValueError("learning method must be one of BC, DQN, PPO, GAIL")
 
     # make log directory
     logdir = f"logs/{learning_method}"
@@ -57,7 +57,7 @@ def train_rl_agent(
 
     print("Start training")
 
-    if learning_method != "PPO":
+    if learning_method not in ["PPO", "DQN"]:
         # load expert trajectory
         with open("expert_trajectory.pkl", "rb") as fp:
             rollouts = pickle.load(fp)
@@ -77,11 +77,31 @@ def train_rl_agent(
 
         bc_trainer.train(n_epochs=timesteps)
         bc_trainer.save_policy(f"{models_dir}/BC_{timesteps}_steps.zip")
-    else:
 
+    elif learning_method == "DQN":
+        model = DQN(
+            PolycraftDQNPolicy,  # "MlpPolicy"
+            env,
+            verbose=1,
+            learning_rate=3e-4,
+            batch_size=batch_size,
+            tensorboard_log=logdir,
+        )
+
+        # checkpoint callback
+        checkpoint_callback = CheckpointCallback(
+            save_freq=1024, save_path=f"{models_dir}/", name_prefix="DQN"
+        )
+
+        model.learn(
+            total_timesteps=timesteps,
+            callback=checkpoint_callback,
+        )
+
+    else:  # PPO or GAIL
         # agent
         model = PPO(
-            PolycraftPolicy,
+            PolycraftPPOPolicy,
             env,
             verbose=1,
             n_steps=epoch,
@@ -183,7 +203,7 @@ def main():
     # return
 
     env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
-    learning_method = ["BC", "PPO", "GAIL"][0]
+    learning_method = ["BC", "DQN", "PPO", "GAIL"][0]
     timesteps: int = 1024
 
     train_rl_agent(env, learning_method, timesteps)
@@ -191,7 +211,9 @@ def main():
     # load and evaluate the model
     # if learning_method == "BC":
     #     model = bc.reconstruct_policy("models/BC/1/BC_1024_steps.zip")
-    # else:
+    # elif learning_method == "DQN":
+    #     model = DQN.load(f"models/{learning_method}/1/DQN_102400_steps.zip", env=env)
+    # else:  # PPO or GAIL
     #     model = PPO.load(f"models/{learning_method}/1/PPO_1024_steps.zip", env=env)
 
     # enhsp = ENHSP()
