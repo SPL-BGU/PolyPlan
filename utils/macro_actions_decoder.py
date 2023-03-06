@@ -13,6 +13,16 @@ class MacroActionsDecoder(ActionsDecoder):
 
         self.tree_locations = []
 
+        self.items_decoder = {
+            "minecraft:log": 0,
+            "minecraft:planks": 1,
+            "minecraft:stick": 2,
+            "polycraft:sack_polyisoprene_pellets": 3,
+            "polycraft:tree_tap": 4,
+            "polycraft:wooden_pogo_stick": 5,
+        }
+        self.items_size = len(self.items_decoder)
+
         self.macro_actions = {
             0: TP_Break_And_Collect(),
             1: Craft(),

@@ -34,10 +34,10 @@ class BasicMinecraft(PolycraftGymEnv):
                 ),  # count of trees in the map
                 "inventory": Box(
                     low=0,
-                    high=self.decoder.get_items_size(),  # 18
-                    shape=(9 * 2,),
+                    high=self.decoder.get_items_size(),  # 6
+                    shape=(self.decoder.get_items_size(),),
                     dtype=np.uint8,
-                ),  # 1 line of inventory (9) and for each item show name and count (*2)
+                ),  # count of each item in the inventory
             }
         )
         self.observation_space = flatten_space(self._observation_space)
@@ -52,7 +52,7 @@ class BasicMinecraft(PolycraftGymEnv):
                     dtype=np.uint8,
                 ),
                 "inventory": np.zeros(
-                    (9 * 2,),
+                    (self.decoder.get_items_size(),),
                     dtype=np.uint8,
                 ),
             }
@@ -74,18 +74,15 @@ class BasicMinecraft(PolycraftGymEnv):
 
         # update the inventory
         inventory = np.zeros(
-            (2, 9),
+            (self.decoder.get_items_size(),),
             dtype=np.uint8,
         )
         for location, item in sense_all["inventory"].items():
             if location == "selectedItem":
                 continue
             location = int(location)
-            inventory[0][location] = self.decoder.decode_item_type(item["item"])
-            inventory[1][location] = item["count"]
-        self._state[
-            "inventory"
-        ] = inventory.ravel()  # flatten the inventory to 1D vector
+            inventory[self.decoder.decode_item_type(item["item"])] = item["count"]
+        self._state["inventory"] = inventory
 
         # update the reward, binary reward - achieved the goal or not
         self.reward = (
