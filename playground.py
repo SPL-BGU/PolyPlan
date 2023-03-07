@@ -7,6 +7,9 @@ import cProfile, pstats
 import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
+import numpy as np
+import pandas as pd
+
 from envs import BasicMinecraft
 from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
 
@@ -23,6 +26,31 @@ from imitation.data.wrappers import RolloutInfoWrapper
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.networks import RunningNorm
 from imitation.util import logger as imit_logger
+
+from gym.wrappers import RecordEpisodeStatistics
+
+
+def save_log(env: RecordEpisodeStatistics, filename: str, window_size: int = 256):
+    score = np.array(env.return_queue)
+    length = np.array(env.length_queue)
+    array_score = []
+    array_length = []
+
+    i = 0
+    while i < len(score):
+        j = i + 1
+        total = length[i]
+        while j < len(score) and (total := total + length[j]) < window_size:
+            j += 1
+        avg_score = np.average(score[i:j])
+        avg_length = np.average(length[i:j])
+        array_score.append(avg_score)
+        array_length.append(avg_length)
+        i = j
+
+    results = np.array([array_score, array_length]).transpose()
+    df = pd.DataFrame(results, columns=["score", "length"])
+    df.to_csv(filename)
 
 
 def train_rl_agent(
@@ -43,6 +71,8 @@ def train_rl_agent(
 
     if learning_method not in ["BC", "DQN", "PPO", "GAIL"]:
         raise ValueError("learning method must be one of BC, DQN, PPO, GAIL")
+
+    env = RecordEpisodeStatistics(env, deque_size=5000)
 
     # make log directory
     logdir = f"logs/{learning_method}"
@@ -66,6 +96,13 @@ def train_rl_agent(
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
 
+    save_freq = 1024
+
+    # checkpoint callback
+    checkpoint_callback = CheckpointCallback(
+        save_freq=save_freq, save_path=f"{models_dir}/", name_prefix=learning_method
+    )
+
     if learning_method == "BC":
         # basic behavior cloning
         bc_trainer = bc.BC(
@@ -84,13 +121,11 @@ def train_rl_agent(
             env,
             verbose=1,
             learning_rate=3e-4,
+            learning_starts=5000,
+            train_freq=(1, "episode"),
+            target_update_interval=2000,
             batch_size=batch_size,
             tensorboard_log=logdir,
-        )
-
-        # checkpoint callback
-        checkpoint_callback = CheckpointCallback(
-            save_freq=1024, save_path=f"{models_dir}/", name_prefix="DQN"
         )
 
         model.learn(
@@ -134,45 +169,21 @@ def train_rl_agent(
                 custom_logger=imit_logger.configure(folder=logdir),
             )
 
-            checkpoint_callback = CheckpointCallback(
-                save_freq=1,
-                save_path=f"{models_dir}/",
-                name_prefix="GAIL",
-            )
-
             checkpoint_callback.model = model
-            last_rewards = []
-            f = open(f"{logdir}/reward_over_time.txt", "w")
-
-            def gail_callback(steps: int):
-                reward, _ = evaluate_policy(
-                    model=model,
-                    env=env,
-                    n_eval_episodes=1,
-                    return_episode_rewards=True,
-                )
-                last_rewards.append(reward[0])
-                if ((steps + 1) * epoch) % 1024 == 0:
-                    checkpoint_callback.on_step()
-                    f.write(str(sum(last_rewards) / len(last_rewards)) + "\n")
-                    last_rewards.clear()
+            checkpoint_callback.save_freq = int(save_freq / epoch)
 
             gail_trainer.train(
                 total_timesteps=timesteps,
-                callback=gail_callback,
+                callback=lambda step: checkpoint_callback.on_step(),
             )
-            f.close()
         else:
-            # checkpoint callback
-            checkpoint_callback = CheckpointCallback(
-                save_freq=1024, save_path=f"{models_dir}/", name_prefix="PPO"
-            )
-
             # RL using PPO
             model.learn(
                 total_timesteps=timesteps,
                 callback=checkpoint_callback,
             )
+
+    save_log(env, f"{logdir}/output.csv", epoch)
 
     print("Done training")
 

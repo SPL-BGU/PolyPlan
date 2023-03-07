@@ -34,8 +34,8 @@ class BasicMinecraft(PolycraftGymEnv):
                 ),  # count of trees in the map
                 "inventory": Box(
                     low=0,
-                    high=self.decoder.get_items_size(),  # 6
-                    shape=(self.decoder.get_items_size(),),
+                    high=64,  # 64 is the max stack size
+                    shape=(self.decoder.get_items_size(),),  # 6
                     dtype=np.uint8,
                 ),  # count of each item in the inventory
             }

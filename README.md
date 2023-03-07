@@ -32,6 +32,7 @@ and then try again.
 
 3. pip install all the requirements for this project:
 > python -m pip install -r requirements.txt
+* If you got an error while installing gym please install setuptools==66
 
 4. Make sure java 15 or higher is installed in order to use the planner agent using ENHSP:
 > [Download link for ENHSP](https://drive.google.com/file/d/1jNq_RRaf5jilPGjX2BARYo6CNJAB-o5o/view)
