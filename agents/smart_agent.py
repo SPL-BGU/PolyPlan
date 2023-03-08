@@ -1,4 +1,6 @@
 from agents.polycraft_agent import PolycraftAgent
+from numpy import ndarray
+from numpy.random import choice as random_choice
 
 
 class SmartAgent(PolycraftAgent):
@@ -11,4 +13,7 @@ class SmartAgent(PolycraftAgent):
     # overriding abstract method
     def choose_action(self, state) -> int:
         """Predict the next action"""
-        return self.model.predict(state)[0]
+        predictions, _ = self.model.predict(state)
+        if type(predictions) is ndarray:
+            return random_choice(predictions)
+        return predictions

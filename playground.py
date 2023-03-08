@@ -223,7 +223,7 @@ def main():
     # if learning_method == "BC":
     #     model = bc.reconstruct_policy("models/BC/1/BC_1024_steps.zip")
     # elif learning_method == "DQN":
-    #     model = DQN.load(f"models/{learning_method}/1/DQN_102400_steps.zip", env=env)
+    #     model = DQN.load(f"models/{learning_method}/1/DQN_1024_steps.zip", env=env)
     # else:  # PPO or GAIL
     #     model = PPO.load(f"models/{learning_method}/1/PPO_1024_steps.zip", env=env)
 
