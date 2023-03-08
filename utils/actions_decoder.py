@@ -54,6 +54,8 @@ class ActionsDecoder(ABC):
 
         self.directions_decoder = {"NORTH": 0, "EAST": 1, "SOUTH": 2, "WEST": 3}
 
+        self.actions_size = {}
+
     def update_tp(self, sense_all: Dict) -> None:
         return
 
@@ -72,9 +74,8 @@ class ActionsDecoder(ABC):
         """Decode the action type to planning"""
         raise NotImplementedError
 
-    @abstractmethod
     def get_actions_size(self) -> int:
-        raise NotImplementedError
+        return sum(self.actions_size.values())
 
     def decode_block_type(self, name) -> int:
         return self.blocks_decoder[name]

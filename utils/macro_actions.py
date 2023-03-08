@@ -1,26 +1,14 @@
 from typing import Dict, List
+from utils.single_action import SingleAction
 
 
-class MacroAction:
+class MacroAction(SingleAction):
 
     _actions: Dict[int, List[str]]
-    _encoder: Dict[str, int]
-
-    def __init__(self):
-        self._actions = None
-        self._encoder = None
 
     @property
-    def actions(self) -> Dict[int, str]:
+    def actions(self) -> Dict[int, List[str]]:
         return self._actions
-
-    @property
-    def length(self) -> int:
-        return len(self._actions)
-
-    @property
-    def encoder(self) -> Dict[str, int]:
-        return self._encoder
 
 
 class TP_Break_And_Collect(MacroAction):
@@ -89,7 +77,7 @@ class TP_Update:
     def update_actions(
         sense_all: Dict,
         craft: Craft,
-    ) -> None:
+    ) -> list:
         tree_locations = []
         crafting_table_location = "NOP"
 

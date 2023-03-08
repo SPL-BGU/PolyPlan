@@ -84,7 +84,3 @@ class MacroActionsDecoder(ActionsDecoder):
                     return act
 
         raise ValueError(f"decode to planning not found action '{action}'")
-
-    # overriding abstract method
-    def get_actions_size(self) -> int:
-        return sum(self.actions_size.values())
