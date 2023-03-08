@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 
 class QLearningAgent(PolycraftAgent):
-    """Agent that act randomly."""
+    """QLearningAgent Agent."""
 
     def __init__(
         self,
@@ -95,6 +95,8 @@ class QLearningAgent(PolycraftAgent):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
 
     def learn(self, n_episodes):
+        """Learns the Q-table by playing n_episodes episodes."""
+
         for _ in tqdm(range(n_episodes)):
             state = self.env.reset()
             done = False
@@ -111,6 +113,11 @@ class QLearningAgent(PolycraftAgent):
                 state = next_state
 
             self.decay_epsilon()
-    
+
     def save(self, path):
+        """Export the Q-table to a csv file."""
         self.q_table.to_csv(path)
+
+    def load(self, path):
+        """Load the Q-table from a csv file."""
+        self.q_table = pd.read_csv(path, index_col=0).rename(columns=lambda x: int(x))
