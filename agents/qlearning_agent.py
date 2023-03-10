@@ -49,8 +49,7 @@ class QLearningAgent(PolycraftAgent):
         otherwise a random action with probability epsilon to ensure exploration.
         """
 
-        state = str(state)
-        self.check_state_exist(state)
+        self.check_state_exist(str(state))
 
         # with probability epsilon return a random action to explore the environment
         if np.random.random() < self.epsilon:
@@ -94,7 +93,7 @@ class QLearningAgent(PolycraftAgent):
     def decay_epsilon(self):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
 
-    def learn(self, n_episodes):
+    def learn(self, n_episodes: int):
         """Learns the Q-table by playing n_episodes episodes."""
 
         for _ in tqdm(range(n_episodes)):
@@ -113,6 +112,25 @@ class QLearningAgent(PolycraftAgent):
                 state = next_state
 
             self.decay_epsilon()
+
+    def learn_offline(self, n_episodes: int, expert: PolycraftAgent):
+        """Learns the Q-table by playing n_episodes episodes offline from expert trajectories."""
+
+        for _ in tqdm(range(n_episodes)):
+            state = self.env.reset()
+            done = False
+
+            # play one episode
+            while not done:
+                self.check_state_exist(str(state))
+                action = expert.choose_action(state)
+                next_state, reward, done, _ = self.env.step(action)
+
+                # update the agent
+                self.update(state, action, reward, done, next_state)
+
+                # update if the environment is done and the current obs
+                state = next_state
 
     def save(self, path):
         """Export the Q-table to a csv file."""
