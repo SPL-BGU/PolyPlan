@@ -14,6 +14,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
             "minecraft:air": 0,
             "minecraft:log": 1,
             "minecraft:crafting_table": 2,
+            "minecraft:bedrock": 3,
         }
         self.blocks_size = len(self.blocks_decoder)
 
@@ -53,7 +54,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
         TP_Update.update_actions(sense_all, self.advanced_actions[2])
 
     # overriding abstract method
-    def decode_action_type(self, action: List[int]) -> List[str]:
+    def decode_action_type(self, action: List[int], look_at: int) -> List[str]:
         """Decode the action type from list of int to polycraft action string"""
         single_action = action[0]
         if single_action >= self.get_actions_size():
@@ -65,6 +66,16 @@ class AdvancedActionsDecoder(ActionsDecoder):
             z_pos = pos // 30 + 1
 
             return [f"TP_TO {x_pos},4,{z_pos}"]
+
+        if single_action == 1:  # if break
+            if look_at != 1:  # if not looking at tree
+                return ["NOP"]
+            return ["BREAK_BLOCK"]
+
+        if single_action == 6:  # if place tree tap
+            if look_at != 1:  # if not looking at tree
+                return ["NOP"]
+            return self.advanced_actions[3].actions[0]
 
         for index, size in self.actions_size.items():
             if single_action < size:

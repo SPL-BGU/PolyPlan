@@ -5,6 +5,7 @@ from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
 from utils import AdvancedActionsDecoder
+from typing import Union, List
 
 
 class AdvancedMinecraft(PolycraftGymEnv):
@@ -80,6 +81,9 @@ class AdvancedMinecraft(PolycraftGymEnv):
             }
         )
         self.state = flatten(self._observation_space, self._state)
+
+    def decode_action_type(self, action: Union[List[int], int]) -> List[str]:
+        return self.decoder.decode_action_type(action, self._state["blockInFront"][0])
 
     def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""

@@ -138,11 +138,14 @@ class PolycraftGymEnv(Env):
         self.max_rounds = rounds
         self.rounds_left = rounds
 
+    def decode_action_type(self, action: Union[List[int], int]) -> List[str]:
+        return self.decoder.decode_action_type(action)
+
     def step(self, action: Union[List[int], int]) -> tuple:
         info = {}
         self.rounds_left -= 1
 
-        command_list = self.decoder.decode_action_type(action)
+        command_list = self.decode_action_type(action)
         self.action = command_list
 
         for command in command_list:

@@ -10,7 +10,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 import numpy as np
 import pandas as pd
 
-from envs import BasicMinecraft
+from envs import BasicMinecraft, AdvancedMinecraft
 from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
 
 from planning.enhsp import ENHSP
@@ -207,13 +207,16 @@ def evaluate(env, model):
 
 
 def main():
+
+    minecraft = [BasicMinecraft, AdvancedMinecraft][1]
+
     # only start pal
-    # env = BasicMinecraft(visually=True, start_pal=True, keep_alive=True)
+    # env = minecraft(visually=True, start_pal=True, keep_alive=True)
     # env.reset()
     # env.close()
     # return
 
-    env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
+    env = minecraft(visually=True, start_pal=True, keep_alive=False)
     learning_method = ["BC", "DQN", "PPO", "GAIL"][0]
     timesteps: int = 1024
 
