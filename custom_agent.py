@@ -1,14 +1,23 @@
-from envs import BasicMinecraft
+from envs import BasicMinecraft, AdvancedMinecraft
 from agents import LearningAgent, FixedScriptAgent
 
 
 def main():
-    # start the polycraft environment
-    env = BasicMinecraft(visually=True, start_pal=True, keep_alive=False)
 
-    fixed_script_agent = FixedScriptAgent(
-        env, filename="agents/scripts/macro_actions_script.txt"
-    )
+    advanced_actions = False  # set to True to use advanced actions
+    minecraft = [BasicMinecraft, AdvancedMinecraft][int(advanced_actions)]
+
+    # start the polycraft environment
+    env = minecraft(visually=True, start_pal=True, keep_alive=False)
+
+    if advanced_actions:
+        fixed_script_agent = FixedScriptAgent(
+            env, filename="agents/scripts/advanced_actions_script.txt"
+        )
+    else:
+        fixed_script_agent = FixedScriptAgent(
+            env, filename="agents/scripts/macro_actions_script.txt"
+        )
 
     recording = True
     planning = False

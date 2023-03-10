@@ -7,9 +7,6 @@ import cProfile, pstats
 import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
-import numpy as np
-import pandas as pd
-
 from envs import BasicMinecraft, AdvancedMinecraft
 from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
 
@@ -18,7 +15,7 @@ from agents import FixedScriptAgent
 
 from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 
 from imitation.algorithms import bc
 from imitation.algorithms.adversarial.gail import GAIL
@@ -28,29 +25,7 @@ from imitation.util.networks import RunningNorm
 from imitation.util import logger as imit_logger
 
 from gym.wrappers import RecordEpisodeStatistics
-
-
-def save_log(env: RecordEpisodeStatistics, filename: str, window_size: int = 256):
-    score = np.array(env.return_queue)
-    length = np.array(env.length_queue)
-    array_score = []
-    array_length = []
-
-    i = 0
-    while i < len(score):
-        j = i + 1
-        total = length[i]
-        while j < len(score) and (total := total + length[j]) < window_size:
-            j += 1
-        avg_score = np.average(score[i:j])
-        avg_length = np.average(length[i:j])
-        array_score.append(avg_score)
-        array_length.append(avg_length)
-        i = j
-
-    results = np.array([array_score, array_length]).transpose()
-    df = pd.DataFrame(results, columns=["score", "length"])
-    df.to_csv(filename)
+from utils import Logger
 
 
 def train_rl_agent(
@@ -59,6 +34,7 @@ def train_rl_agent(
     timesteps: int = 1024,
     epoch: int = 256,
     batch_size: int = 64,
+    record_trajectories: bool = False,
 ):
     """Train RL agent using PPO, BC, or GAIL
 
@@ -67,6 +43,7 @@ def train_rl_agent(
         timesteps (int, optional): number of timesteps to train. Defaults to 1024.
         epoch (int, optional): how much steps to until update the net. Defaults to 256.
         batch_size (int, optional): size of the sub-updated in each epoch. Defaults to 64.
+        record_trajectories (bool, optional): whether to record trajectories for planning. Defaults to False.
     """
 
     if learning_method not in ["BC", "DQN", "PPO", "GAIL"]:
@@ -177,13 +154,20 @@ def train_rl_agent(
                 callback=lambda step: checkpoint_callback.on_step(),
             )
         else:
+            if record_trajectories:
+                callback = CallbackList(
+                    [checkpoint_callback, Logger.RecordTrajectories()]
+                )
+            else:
+                callback = checkpoint_callback
+
             # RL using PPO
             model.learn(
                 total_timesteps=timesteps,
-                callback=checkpoint_callback,
+                callback=callback,
             )
 
-    save_log(env, f"{logdir}/output.csv", epoch)
+    Logger.save_log(env, f"{logdir}/output.csv")
 
     print("Done training")
 
@@ -208,7 +192,7 @@ def evaluate(env, model):
 
 def main():
 
-    minecraft = [BasicMinecraft, AdvancedMinecraft][1]
+    minecraft = [BasicMinecraft, AdvancedMinecraft][0]
 
     # only start pal
     # env = minecraft(visually=True, start_pal=True, keep_alive=True)
