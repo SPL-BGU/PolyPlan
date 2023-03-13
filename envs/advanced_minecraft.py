@@ -10,7 +10,7 @@ from typing import Union, List
 
 class AdvancedMinecraft(PolycraftGymEnv):
     """
-    Create the basic minecraft environment
+    Create the advanced minecraft environment
     Where pal_path must be updated in the config.py file to work
 
     args:
@@ -32,7 +32,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
                     high=self.decoder.get_blocks_size(),
                     shape=(1,),
                     dtype=np.uint8,
-                ),  # 3
+                ),  # 4
                 "gameMap": Box(
                     low=0,
                     high=self.decoder.get_blocks_size(),
@@ -57,7 +57,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
 
         self.action_space = MultiDiscrete(
             [self.decoder.get_actions_size(), 30 * 30]
-        )  # 6, 30*30 -> action, tp_pos
+        )  # 7, 30*30 -> action, tp_pos
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -91,6 +91,8 @@ class AdvancedMinecraft(PolycraftGymEnv):
 
         # get the state from the Polycraft server
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+
+        inventory_before = self._state["inventory"].copy()
 
         self._state["blockInFront"][0] = self.decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
@@ -130,12 +132,33 @@ class AdvancedMinecraft(PolycraftGymEnv):
         position = (pos_x - 1) + ((pos_z - 1) * 30)
         self._state["position"][0] = position
 
-        # update the reward, binary reward - achieved the goal or not
-        self.reward = (
-            int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
-        )
+        inventory_after = self._state["inventory"].copy()
+
+        # update the reward
+        reward = 0
+        change = [int(inventory_after[i]) - int(inventory_before[i]) for i in range(6)]
+        if change[0] > 0:  # log
+            reward += 1
+        if change[1] > 0:  # planks
+            reward += 2
+        if change[2] > 0:  # sticks
+            reward += 2
+        if change[3] > 0:  # get rubber
+            reward += 100
+        if change[4] > 0:  # tree tap
+            reward += 10
+        if change[5] > 0:  # wooden pogo
+            reward += 1000
+
+        # update the reward
+        self.reward = reward
         self.collected_reward += self.reward
 
         self.state = flatten(self._observation_space, self._state)
 
         return self.reward
+
+    def is_game_over(self) -> bool:
+        done = (self.reward == 1000) or (self.rounds_left == 0)
+        self.done = done
+        return done
