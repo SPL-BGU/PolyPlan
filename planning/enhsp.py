@@ -23,7 +23,7 @@ class ENHSP:
         :param problem: the problem file - must be located in the planning folder
         """
 
-        cmd = f"java -jar {self.path}/enhsp.jar -o {os. getcwd()}/planning/{domain} -f {os. getcwd()}/planning/{problem}"
+        cmd = f"java -jar {self.path}/enhsp.jar -o {os. getcwd()}/planning/{domain} -f {os. getcwd()}/planning/{problem} -planner opt-hrmax"
 
         planner = subprocess.Popen(
             "exec " + cmd,

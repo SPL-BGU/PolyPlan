@@ -7,7 +7,7 @@ import cProfile, pstats
 import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from envs import BasicMinecraft, AdvancedMinecraft
+from envs import BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft
 from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
 
 from planning.enhsp import ENHSP
@@ -93,21 +93,27 @@ def train_rl_agent(
         bc_trainer.save_policy(f"{models_dir}/BC_{timesteps}_steps.zip")
 
     elif learning_method == "DQN":
+        if record_trajectories:
+            callback = CallbackList([checkpoint_callback, Logger.RecordTrajectories()])
+        else:
+            callback = checkpoint_callback
+
         model = DQN(
             PolycraftDQNPolicy,  # "MlpPolicy"
             env,
             verbose=1,
             learning_rate=3e-4,
-            learning_starts=5000,
+            learning_starts=2048,
+            exploration_fraction=1,
             train_freq=(1, "episode"),
-            target_update_interval=2000,
+            target_update_interval=2048,
             batch_size=batch_size,
             tensorboard_log=logdir,
         )
 
         model.learn(
             total_timesteps=timesteps,
-            callback=checkpoint_callback,
+            callback=callback,
         )
 
     else:  # PPO or GAIL
@@ -192,7 +198,7 @@ def evaluate(env, model):
 
 def main():
 
-    minecraft = [BasicMinecraft, AdvancedMinecraft][0]
+    minecraft = [BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft][0]
 
     # only start pal
     # env = minecraft(visually=True, start_pal=True, keep_alive=True)
@@ -204,7 +210,7 @@ def main():
     learning_method = ["BC", "DQN", "PPO", "GAIL"][0]
     timesteps: int = 1024
 
-    train_rl_agent(env, learning_method, timesteps)
+    train_rl_agent(env, learning_method, timesteps, record_trajectories=False)
 
     # load and evaluate the model
     # if learning_method == "BC":

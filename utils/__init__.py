@@ -2,5 +2,6 @@ from utils.actions_decoder import ActionsDecoder
 from utils.single_action_decoder import SingleActionDecoder
 from utils.macro_actions_decoder import MacroActionsDecoder
 from utils.advanced_actions_decoder import AdvancedActionsDecoder
+from utils.intermediate_actions_decoder import IntermediateActionsDecoder
 from utils.server_controller import ServerController
 import utils.logger as Logger

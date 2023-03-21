@@ -4,13 +4,14 @@ from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
-from utils import AdvancedActionsDecoder
+from utils import IntermediateActionsDecoder
 from typing import Union, List
+import time
 
 
-class AdvancedMinecraft(PolycraftGymEnv):
+class IntermediateMinecraft(PolycraftGymEnv):
     """
-    Create the advanced minecraft environment
+    Create the basic intermediate environment
     Where pal_path must be updated in the config.py file to work
 
     args:
@@ -22,7 +23,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
 
     def __init__(self, **kwargs):
         # PolycraftGymEnv
-        super().__init__(**kwargs, decoder=AdvancedActionsDecoder())
+        super().__init__(**kwargs, decoder=IntermediateActionsDecoder(self))
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(
@@ -36,9 +37,9 @@ class AdvancedMinecraft(PolycraftGymEnv):
                 "gameMap": Box(
                     low=0,
                     high=self.decoder.get_blocks_size(),
-                    shape=(30 * 30,),
+                    shape=(6,),
                     dtype=np.uint8,
-                ),  # map (30*30)
+                ),  # 5 trees, 1 crafting table
                 "inventory": Box(
                     low=0,
                     high=64,  # 64 is the max stack size
@@ -47,15 +48,15 @@ class AdvancedMinecraft(PolycraftGymEnv):
                 ),  # count of each item in the inventory
                 "position": Box(
                     low=0,
-                    high=900,
+                    high=5,
                     shape=(1,),
-                    dtype=np.int16,
-                ),  # point in map size (30*30)
+                    dtype=np.uint8,
+                ),  # point in map
             }
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(self.decoder.get_actions_size())  # 6 + 900
+        self.action_space = Discrete(self.decoder.get_actions_size())  # 12
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -64,21 +65,56 @@ class AdvancedMinecraft(PolycraftGymEnv):
                     (1,),
                     dtype=np.uint8,
                 ),
-                "gameMap": np.zeros(
-                    (30 * 30,),
+                "gameMap": np.array(
+                    [2, 1, 1, 1, 1, 1],
                     dtype=np.uint8,
                 ),
                 "inventory": np.zeros(
                     (self.decoder.get_items_size(),),
                     dtype=np.uint8,
                 ),
-                "position": np.zeros(
-                    (1,),
-                    dtype=np.int16,
+                "position": np.array(
+                    [0],
+                    dtype=np.uint8,
                 ),
             }
         )
         self.state = flatten(self._observation_space, self._state)
+
+        self.max_rounds = 128
+
+    def reset(self) -> np.ndarray:
+
+        # reset the environment
+        self.server_controller.send_command(f"RESET domain {self._domain_path}")
+        if self.pal_owner:
+            while "game initialization completed" not in str(self._next_line):
+                self._next_line = self._check_queues()
+        time.sleep(2)
+
+        # reset the teleport according to the new domain
+        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+        self.decoder.update_tp(sense_all)
+
+        # reset the state
+        self.collected_reward = 0
+        self.action = None
+        self.done = False
+        self.step(0)
+
+        self._state["position"][0] = 0
+        self._state["gameMap"] = np.array(
+            [2, 1, 1, 1, 1, 1],
+            dtype=np.uint8,
+        )
+        self.rounds_left = self.max_rounds
+        return self.state
+
+    def step(self, action: Union[List[int], int]) -> np.ndarray:
+        last_pos = self._state["position"][0]
+        state, reward, done, info = super().step(action)
+        info["last_pos"] = last_pos
+        return state, reward, done, info
 
     def decode_action_type(self, action: Union[List[int], int]) -> List[str]:
         return self.decoder.decode_action_type(action, self._state["blockInFront"][0])
@@ -96,22 +132,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
             sense_all["blockInFront"]["name"]
         )
 
-        # update the gameMap
-        gameMap = np.zeros(
-            (30, 30, 1),
-            dtype=np.uint8,
-        )
-        for location, game_block in sense_all["map"].items():
-            location = [int(i) for i in location.split(",")]
-            pos_x = location[0]
-            pos_z = location[2]
-            if pos_x == 0 or pos_x == 31 or pos_z == 0 or pos_z == 31:
-                continue
-            gameMap[pos_x - 1][pos_z - 1][0] = self.decoder.decode_block_type(
-                game_block["name"]
-            )
-        self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
-
         # update the inventory
         inventory = np.zeros(
             (self.decoder.get_items_size(),),
@@ -124,12 +144,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
             inventory[self.decoder.decode_item_type(item["item"])] = item["count"]
         self._state["inventory"] = inventory
 
-        # location in map
-        pos_x = sense_all["player"]["pos"][0]
-        pos_z = sense_all["player"]["pos"][2]
-        position = (pos_x - 1) + ((pos_z - 1) * 30)
-        self._state["position"][0] = position
-
         inventory_after = self._state["inventory"].copy()
 
         # update the reward
@@ -141,12 +155,12 @@ class AdvancedMinecraft(PolycraftGymEnv):
             reward += 2
         if change[2] > 0:  # sticks
             reward += 2
-        if change[3] > 0:  # get rubber
-            reward += 100
+        if change[3] == 1 and inventory_after[3] == 1:  # first time get rubber
+            reward = 50
         if change[4] > 0:  # tree tap
-            reward += 10
+            reward += 50
         if change[5] > 0:  # wooden pogo
-            reward += 1000
+            reward += 500
 
         # update the reward
         self.reward = reward
@@ -157,6 +171,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
         return self.reward
 
     def is_game_over(self) -> bool:
-        done = (self.reward == 1000) or (self.rounds_left == 0)
+        done = (self.reward == 500) or (self.rounds_left == 0)
         self.done = done
         return done

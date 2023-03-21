@@ -3,7 +3,7 @@ from utils.macro_actions import MacroAction, Craft
 
 
 class TP(MacroAction):
-    class_actions = {0: ["TP_TO"]}
+    class_actions = {i: ["TP_TO"] for i in range(900)}
     class_encoder = {"TP_TO": 0}
 
     def __init__(self):
