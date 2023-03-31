@@ -10,6 +10,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from envs import BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft
 from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
 
+from agents import QLearningAgent
 from planning.enhsp import ENHSP
 from agents import FixedScriptAgent
 
@@ -94,7 +95,15 @@ def train_rl_agent(
 
     elif learning_method == "DQN":
         if record_trajectories:
-            callback = CallbackList([checkpoint_callback, Logger.RecordTrajectories()])
+            rec_dir = f"{logdir}/solutions"
+            if not os.path.exists(rec_dir):
+                os.makedirs(rec_dir)
+            callback = CallbackList(
+                [
+                    checkpoint_callback,
+                    Logger.RecordTrajectories(output_dir=rec_dir),
+                ]
+            )
         else:
             callback = checkpoint_callback
 
@@ -161,8 +170,14 @@ def train_rl_agent(
             )
         else:
             if record_trajectories:
+                rec_dir = f"{logdir}/solutions"
+                if not os.path.exists(rec_dir):
+                    os.makedirs(rec_dir)
                 callback = CallbackList(
-                    [checkpoint_callback, Logger.RecordTrajectories()]
+                    [
+                        checkpoint_callback,
+                        Logger.RecordTrajectories(output_dir=rec_dir),
+                    ]
                 )
             else:
                 callback = checkpoint_callback
@@ -174,6 +189,84 @@ def train_rl_agent(
             )
 
     Logger.save_log(env, f"{logdir}/output.csv")
+
+    print("Done training")
+
+
+def train_with_qlearning(
+    env,
+    learning_method: str,
+    timesteps: int = 1024,
+    record_trajectories: bool = False,
+):
+    """Train Q-Learning agent
+
+    Args:
+        learning_method (str): one of "offline", "online"
+        timesteps (int, optional): number of timesteps to train. Defaults to 1024.
+        record_trajectories (bool, optional): whether to record trajectories for planning. Defaults to False.
+    """
+
+    if learning_method not in ["offline", "online"]:
+        raise ValueError("learning method must be offline or online")
+
+    # make log directory
+    logdir = f"logs/qlearning_{learning_method}"
+    dir_index = 1
+    while os.path.exists(f"{logdir}/{dir_index}") and len(
+        os.listdir(f"{logdir}/{dir_index}")
+    ):
+        dir_index += 1
+    logdir = f"{logdir}/{dir_index}"
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    print("Start training")
+
+    models_dir = f"models/qlearning_{learning_method}/{dir_index}"
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+
+    n_episodes = timesteps // env.max_rounds
+
+    if record_trajectories:
+        rec_dir = f"{logdir}/solutions"
+        if not os.path.exists(rec_dir):
+            os.makedirs(rec_dir)
+    else:
+        rec_dir = None
+
+    if learning_method == "online":
+        agent = QLearningAgent(
+            env,
+            learning_rate=0.1,
+            epsilon_decay=0.01,
+            save_path=models_dir,
+            save_interval=50,
+            output_dir=rec_dir,
+            record_trajectories=record_trajectories,
+        )
+        agent.learn(n_episodes)
+    else:  # offline
+        agent = QLearningAgent(
+            env,
+            learning_rate=1,
+            initial_epsilon=0,
+            final_epsilon=0,
+            save_path=models_dir,
+            save_interval=1,
+        )
+
+        if type(env) is BasicMinecraft:
+            filename = "agents/scripts/macro_actions_script.txt"
+        elif type(env) is IntermediateMinecraft:
+            filename = "agents/scripts/intermediate_actions_script.txt"
+        else:  # AdvancedMinecraft
+            filename = "agents/scripts/advanced_actions_script.txt"
+
+        expert = FixedScriptAgent(env, filename=filename)
+
+        agent.learn(n_episodes, expert)
 
     print("Done training")
 
@@ -198,7 +291,8 @@ def evaluate(env, model):
 
 def main():
 
-    minecraft = [BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft][0]
+    env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft
+    minecraft = [BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft][env_index]
 
     # only start pal
     # env = minecraft(visually=True, start_pal=True, keep_alive=True)
@@ -207,14 +301,24 @@ def main():
     # return
 
     env = minecraft(visually=True, start_pal=True, keep_alive=False)
-    learning_method = ["BC", "DQN", "PPO", "GAIL"][0]
+    learning_method = ["BC", "Q-Learning", "DQN", "PPO", "GAIL"][0]
     timesteps: int = 1024
 
-    train_rl_agent(env, learning_method, timesteps, record_trajectories=False)
+    if learning_method == "Q-Learning":
+        train_with_qlearning(env, "online", timesteps, record_trajectories=True)
+    else:
+        train_rl_agent(env, learning_method, timesteps, record_trajectories=True)
 
     # load and evaluate the model
     # if learning_method == "BC":
     #     model = bc.reconstruct_policy("models/BC/1/BC_1024_steps.zip")
+    # elif learning_method == "Q-Learning":
+    #     model = QLearningAgent(
+    #         env,
+    #         initial_epsilon=0,
+    #         final_epsilon=0,
+    #     )
+    #     model.load("models/qlearning_online/1/qtable_100_episodes.csv")
     # elif learning_method == "DQN":
     #     model = DQN.load(f"models/{learning_method}/1/DQN_1024_steps.zip", env=env)
     # else:  # PPO or GAIL

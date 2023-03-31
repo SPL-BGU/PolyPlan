@@ -5,16 +5,20 @@ from tqdm import tqdm
 
 
 class QLearningAgent(PolycraftAgent):
-    """QLearningAgent Agent."""
+    """Q-Learning Agent."""
 
     def __init__(
         self,
         env,
-        learning_rate: float,
+        learning_rate: float = 0.1,
         initial_epsilon: float = 1,
-        epsilon_decay: float = 0.001,
+        epsilon_decay: float = 0.02,
         final_epsilon: float = 0.05,
         discount_factor: float = 0.99,
+        save_path: str = "qlearning/",
+        save_interval: int = 100,
+        output_dir: str = "solutions",
+        record_trajectories: bool = False,
     ):
         """Initialize a Reinforcement Learning agent with an empty dictionary
         of state-action values (q_table), a learning rate and an epsilon.
@@ -40,6 +44,17 @@ class QLearningAgent(PolycraftAgent):
         self.epsilon_decay = epsilon_decay
         self.final_epsilon = final_epsilon
 
+        self.save_path = save_path
+        self.save_interval = save_interval
+        self.num_timesteps = 0
+
+        self.episode = 0
+        if record_trajectories:
+            self.output_dir = output_dir
+            self.file = open(f"{output_dir}/pfile0.solution", "a")
+        else:
+            self.file = None
+
         self.training_error = []
 
     # overriding abstract method
@@ -49,7 +64,8 @@ class QLearningAgent(PolycraftAgent):
         otherwise a random action with probability epsilon to ensure exploration.
         """
 
-        self.check_state_exist(str(state))
+        state = str(state)
+        self.check_state_exist(state)
 
         # with probability epsilon return a random action to explore the environment
         if np.random.random() < self.epsilon:
@@ -59,31 +75,24 @@ class QLearningAgent(PolycraftAgent):
         else:
             return int(np.argmax(self.q_table.loc[state]))
 
-    def update(
-        self,
-        state,
-        action: int,
-        reward: float,
-        terminated: bool,
-        next_state,
-    ):
-        """Updates the Q-value of an action."""
+    def update(self, trajectory):
+        """Updates the Q-table by playing one episode."""
 
-        state = str(state)
-        next_state = str(next_state)
-        self.check_state_exist(next_state)
+        self.check_state_exist(trajectory[-1][-1])
+        trajectory.reverse()
+        for state, action, reward, terminated, next_state in trajectory:
 
-        future_q_value = (not terminated) * np.max(self.q_table.loc[next_state])
-        temporal_difference = (
-            reward
-            + self.discount_factor * future_q_value
-            - self.q_table.loc[state, action]
-        )
+            future_q_value = (not terminated) * np.max(self.q_table.loc[next_state])
+            temporal_difference = (
+                reward
+                + self.discount_factor * future_q_value
+                - self.q_table.loc[state, action]
+            )
 
-        self.q_table.loc[state, action] = (
-            self.q_table.loc[state, action] + self.lr * temporal_difference
-        )
-        self.training_error.append(temporal_difference)
+            self.q_table.loc[state, action] = (
+                self.q_table.loc[state, action] + self.lr * temporal_difference
+            )
+            self.training_error.append(temporal_difference)
 
     def check_state_exist(self, state):
         if state not in self.q_table.index:
@@ -93,48 +102,58 @@ class QLearningAgent(PolycraftAgent):
     def decay_epsilon(self):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
 
-    def learn(self, n_episodes: int):
-        """Learns the Q-table by playing n_episodes episodes."""
+    def learn(self, n_episodes: int, expert: PolycraftAgent = None):
+        """Learns the Q-table by playing n_episodes episodes.
+        if expert is not None do offline learning from expert trajectories"""
 
         for _ in tqdm(range(n_episodes)):
             state = self.env.reset()
             done = False
 
+            trajectory = []
+
             # play one episode
             while not done:
-                action = self.choose_action(state)
+                if expert:
+                    self.check_state_exist(str(state))
+                    action = expert.choose_action(state)
+                    act = action
+                else:
+                    action = self.choose_action(state)
+                    act = self.env.decoder.decode_to_planning(action)
+
+                # save action
+                if self.file:
+                    self.file.write(f"({act})\n")
+
                 next_state, reward, done, _ = self.env.step(action)
 
-                # update the agent
-                self.update(state, action, reward, done, next_state)
+                # save trajectory
+                trajectory.append((str(state), action, reward, done, str(next_state)))
 
                 # update if the environment is done and the current obs
                 state = next_state
 
+            # update the agent
+            self.update(trajectory)
+
+            self.episode += 1
+
+            if self.file:
+                self.file.close()
+                self.file = open(f"{self.output_dir}/pfile{self.episode}.solution", "a")
+
+            # add to logger
+            self.num_timesteps += 1
+            if self.num_timesteps % self.save_interval == 0:
+                self.save()
             self.decay_epsilon()
 
-    def learn_offline(self, n_episodes: int, expert: PolycraftAgent):
-        """Learns the Q-table by playing n_episodes episodes offline from expert trajectories."""
-
-        for _ in tqdm(range(n_episodes)):
-            state = self.env.reset()
-            done = False
-
-            # play one episode
-            while not done:
-                self.check_state_exist(str(state))
-                action = expert.choose_action(state)
-                next_state, reward, done, _ = self.env.step(action)
-
-                # update the agent
-                self.update(state, action, reward, done, next_state)
-
-                # update if the environment is done and the current obs
-                state = next_state
-
-    def save(self, path):
+    def save(self):
         """Export the Q-table to a csv file."""
-        self.q_table.to_csv(path)
+        self.q_table.to_csv(
+            f"{self.save_path}/qtable_{self.num_timesteps}_episodes.csv"
+        )
 
     def load(self, path):
         """Load the Q-table from a csv file."""
