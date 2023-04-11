@@ -51,7 +51,7 @@ class QLearningAgent(PolycraftAgent):
         self.episode = 0
         if record_trajectories:
             self.output_dir = output_dir
-            self.file = open(f"{output_dir}/pfile0.solution", "a")
+            self.file = open(f"{output_dir}/pfile0.solution", "w")
         else:
             self.file = None
 
@@ -117,13 +117,12 @@ class QLearningAgent(PolycraftAgent):
                 if expert:
                     self.check_state_exist(str(state))
                     action = expert.choose_action(state)
-                    act = action
                 else:
                     action = self.choose_action(state)
-                    act = self.env.decoder.decode_to_planning(action)
 
                 # save action
                 if self.file:
+                    act = self.env.decoder.decode_to_planning(action)
                     self.file.write(f"({act})\n")
 
                 next_state, reward, done, _ = self.env.step(action)
@@ -141,7 +140,7 @@ class QLearningAgent(PolycraftAgent):
 
             if self.file:
                 self.file.close()
-                self.file = open(f"{self.output_dir}/pfile{self.episode}.solution", "a")
+                self.file = open(f"{self.output_dir}/pfile{self.episode}.solution", "w")
 
             # add to logger
             self.num_timesteps += 1

@@ -24,7 +24,7 @@ class RecordTrajectories(BaseCallback):
         super().__init__(verbose)
         self.episode = 0
         self.output_dir = output_dir
-        self.file = open(f"{output_dir}/pfile0.solution", "a")
+        self.file = open(f"{output_dir}/pfile0.solution", "w")
 
     def _on_step(self) -> bool:
         """
@@ -41,6 +41,6 @@ class RecordTrajectories(BaseCallback):
         if env.rounds_left == env.max_rounds:
             self.file.close()
             self.episode += 1
-            self.file = open(f"{self.output_dir}/pfile{self.episode}.solution", "a")
+            self.file = open(f"{self.output_dir}/pfile{self.episode}.solution", "w")
 
         return True
