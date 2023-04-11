@@ -3,7 +3,7 @@
 (define (problem intermediate)
 	(:domain PolyCraft)
 	(:objects
-		cell1 cell2 cell3 cell4 cell5
+		cell1 cell2 cell3 cell4 cell5 - cell
 	)
 	(:init
 		(position cell0)

@@ -4,4 +4,5 @@ from agents.polycraft_agent import PolycraftAgent
 from agents.random_agent import RandomAgent
 from agents.smart_agent import SmartAgent
 from agents.qlearning_agent import QLearningAgent
+from agents.exploring_sam import ExploringSam
 from agents.explore_only_legal import ExploreOnlyLegal
