@@ -2,7 +2,7 @@ from agents.polycraft_agent import PolycraftAgent
 
 
 class FixedScriptAgent(PolycraftAgent):
-    """Agent that follows a fixed script."""
+    """Agent that follows a fixed script"""
 
     def __init__(self, env, filename: str = None, script: list = []):
         super().__init__(env)
@@ -11,6 +11,9 @@ class FixedScriptAgent(PolycraftAgent):
             self._actions_list = file.read().split("\n")
         else:
             self._actions_list = script
+
+        if len(self._actions_list) == 0:
+            raise Exception("Script is empty")
 
         self._current_action = 0
 

@@ -53,6 +53,7 @@ class ExploringSam(PolycraftAgent):
 
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
+        self.enhsp = ENHSP()
 
         self.output_dir = output_dir
         shutil.copyfile(domain, f"{output_dir}/domain.pddl")
@@ -159,9 +160,7 @@ class ExploringSam(PolycraftAgent):
             f.write(domain)
 
         # run enhsp
-        enhsp = ENHSP()
-
-        plan = enhsp.create_plan(
+        plan = self.enhsp.create_plan(
             domain=f"{os.getcwd()}/{str(domain_location)}",
             problem=f"{os.getcwd()}/{str(SOLUTIONS_PATH / 'problem.pddl')}",
         )
@@ -169,7 +168,7 @@ class ExploringSam(PolycraftAgent):
         return plan
 
     def save(self, plan):
-        """Save the plan."""
+        """Save the plan"""
         if len(plan) == 0:
             print(f"score: 0, length: {self.env.max_rounds}")
         else:
@@ -179,5 +178,5 @@ class ExploringSam(PolycraftAgent):
             file.write("\n".join(plan))
 
     def load(self, path):
-        """Change the output_dir to path."""
+        """Change the output_dir to path"""
         self.output_dir = path

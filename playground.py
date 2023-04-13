@@ -324,8 +324,18 @@ def main():
     # else:  # PPO or GAIL
     #     model = PPO.load(f"models/{learning_method}/1/PPO_1024_steps.zip", env=env)
 
+    # if env_index == 0:
+    #     domain = "planning/basic_minecraft_domain.pddl"
+    #     problem = "planning/basic_minecraft_problem.pddl"
+    # elif env_index == 1:
+    #     domain = "planning/intermediate_minecraft_domain.pddl"
+    #     problem = "planning/intermediate_minecraft_problem.pddl"
+    # else:
+    #     domain = "planning/advanced_minecraft_domain.pddl"
+    #     problem = "planning/advanced_minecraft_problem.pddl"
+
     # enhsp = ENHSP()
-    # plan = enhsp.create_plan()
+    # plan = enhsp.create_plan(domain, problem)
     # # print(plan)
     # model = FixedScriptAgent(env, script=plan)
 
