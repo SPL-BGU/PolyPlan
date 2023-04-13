@@ -23,7 +23,7 @@ class IntermediateMinecraft(PolycraftGymEnv):
 
     def __init__(self, **kwargs):
         # PolycraftGymEnv
-        super().__init__(**kwargs, decoder=IntermediateActionsDecoder(self))
+        super().__init__(**kwargs, decoder=IntermediateActionsDecoder())
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(
@@ -82,6 +82,7 @@ class IntermediateMinecraft(PolycraftGymEnv):
         self.state = flatten(self._observation_space, self._state)
 
         self.max_rounds = 128
+        self.decoder.agent_state = self._state
 
     def reset(self) -> np.ndarray:
 
@@ -115,9 +116,6 @@ class IntermediateMinecraft(PolycraftGymEnv):
         state, reward, done, info = super().step(action)
         info["last_pos"] = last_pos
         return state, reward, done, info
-
-    def decode_action_type(self, action: Union[List[int], int]) -> List[str]:
-        return self.decoder.decode_action_type(action, self._state["blockInFront"][0])
 
     def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""

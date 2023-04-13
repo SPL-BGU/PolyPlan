@@ -46,7 +46,7 @@ class MacroActionsDecoder(ActionsDecoder):
         self.tree_locations = TP_Update.update_actions(sense_all, self.macro_actions[1])
 
     # overriding abstract method
-    def decode_action_type(self, action: int) -> List[str]:
+    def decode_action_type(self, action: int, state: Dict) -> List[str]:
         """Decode the action type from int to polycraft action string"""
         if action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{action}'")
@@ -63,7 +63,9 @@ class MacroActionsDecoder(ActionsDecoder):
         elif index == 2:  # if place tree tap
             self.macro_actions[2].update(self.tree_locations[0])
 
-        return self.macro_actions[index].actions[action]
+        return self.macro_actions[index].meet_requirements(
+            action, state, self.items_decoder
+        )
 
     # overriding abstract method
     def encode_action_type(self, action: str) -> int:

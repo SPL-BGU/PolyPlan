@@ -1,8 +1,8 @@
+from abc import ABC
 from typing import Dict
 
 
-class SingleAction:
-
+class SingleAction(ABC):
     _actions: Dict[int, str]
     _encoder: Dict[str, int]
 
@@ -21,6 +21,12 @@ class SingleAction:
     @property
     def encoder(self) -> Dict[str, int]:
         return self._encoder
+
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        return self._actions[action]
 
 
 class NOP(SingleAction):

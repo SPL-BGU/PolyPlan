@@ -4,10 +4,8 @@ from typing import Dict, List
 
 
 class IntermediateActionsDecoder(ActionsDecoder):
-    def __init__(self, env):
+    def __init__(self):
         super().__init__()
-
-        self.env = env
 
         self.advanced_actions: Dict[int, MacroAction]
         self.actions_encoder: Dict[int, Dict[str, int]]
@@ -52,6 +50,8 @@ class IntermediateActionsDecoder(ActionsDecoder):
             3: self.advanced_actions[3].length,  # 1 - index 11 (PLACE TREE TAP)
         }
 
+        self.agent_state = None
+
     # overriding super method
     def update_tp(self, sense_all: Dict) -> None:
         TP_Update.update_actions(
@@ -59,31 +59,33 @@ class IntermediateActionsDecoder(ActionsDecoder):
         )
 
     # overriding abstract method
-    def decode_action_type(self, action: int, look_at: int) -> List[str]:
+    def decode_action_type(self, action: int, state: Dict) -> List[str]:
         """Decode the action type from list of int to polycraft action string"""
         if action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{action}'")
 
         if (action == 6 or action == 11) and (
-            look_at != 1
+            state["blockInFront"][0] != 1
         ):  # if break or place tree tap and not looking at log
             return ["NOP"]
 
         if action < 6:
-            self.env._state["position"][0] = action
+            state["position"][0] = action
 
         if action == 6:
-            self.env._state["gameMap"][self.env._state["position"][0]] = 0
+            state["gameMap"][state["position"][0]] = 0
 
         if action == 9 or action == 10:
-            self.env._state["position"][0] = 0
+            state["position"][0] = 0
 
         for index, size in self.actions_size.items():
             if action < size:
                 break
             action -= size
 
-        return self.advanced_actions[index].actions[action]
+        return self.advanced_actions[index].meet_requirements(
+            action, state, self.items_decoder
+        )
 
     # overriding abstract method
     def encode_action_type(self, action: str) -> int:
@@ -102,7 +104,7 @@ class IntermediateActionsDecoder(ActionsDecoder):
     # overriding abstract method
     def decode_to_planning(self, action: int) -> str:
         """Decode the action type from list of int to planning level string"""
-        location = self.env._state["position"][0]
+        location = self.agent_state["position"][0]
         if action < 6:
             return f"TP_TO cell{location} cell{action}"
 

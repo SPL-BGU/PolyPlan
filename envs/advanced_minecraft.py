@@ -80,8 +80,8 @@ class AdvancedMinecraft(PolycraftGymEnv):
         )
         self.state = flatten(self._observation_space, self._state)
 
-    def decode_action_type(self, action: Union[List[int], int]) -> List[str]:
-        return self.decoder.decode_action_type(action, self._state["blockInFront"][0])
+        self.max_rounds = 128
+        self.decoder.agent_state = self._state
 
     def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""

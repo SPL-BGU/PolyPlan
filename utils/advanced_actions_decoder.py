@@ -49,12 +49,14 @@ class AdvancedActionsDecoder(ActionsDecoder):
             3: self.advanced_actions[3].length,  # 1 - index 905 (PLACE TREE TAP)
         }
 
+        self.agent_state = None
+
     # overriding super method
     def update_tp(self, sense_all: Dict) -> None:
         TP_Update.update_actions(sense_all, self.advanced_actions[2])
 
     # overriding abstract method
-    def decode_action_type(self, action: int, look_at: int) -> List[str]:
+    def decode_action_type(self, action: int, state: Dict) -> List[str]:
         """Decode the action type from list of int to polycraft action string"""
         if action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{action}'")
@@ -66,17 +68,14 @@ class AdvancedActionsDecoder(ActionsDecoder):
 
             return [f"TP_TO {x_pos},4,{z_pos}"]
 
-        if (action == 900 or action == 905) and (
-            look_at != 1
-        ):  # if break or place tree tap and not looking at log
-            return ["NOP"]
-
         for index, size in self.actions_size.items():
             if action < size:
                 break
             action -= size
 
-        return self.advanced_actions[index].actions[action]
+        return self.advanced_actions[index].meet_requirements(
+            action, state, self.items_decoder
+        )
 
     # overriding abstract method
     def encode_action_type(self, action: str) -> int:
@@ -94,8 +93,9 @@ class AdvancedActionsDecoder(ActionsDecoder):
         raise ValueError(f"encode not found action '{action}'")
 
     # overriding abstract method
-    def decode_to_planning(self, action: int, location: int) -> str:
+    def decode_to_planning(self, action: int) -> str:
         """Decode the action type from list of int to planning level string"""
+        location = self.agent_state["position"][0]
         if action < 900:
             return f"TP_TO cell{location} cell{action}"
 

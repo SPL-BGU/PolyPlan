@@ -21,6 +21,15 @@ class Break(MacroAction):
         self._actions = Break.class_actions
         self._encoder = Break.class_encoder
 
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        if action == 0 and state["blockInFront"][0] == 1:
+            return self._actions[action]
+        else:
+            return ["NOP"]
+
 
 class PlaceTreeTap(MacroAction):
     class_actions = {
@@ -32,6 +41,19 @@ class PlaceTreeTap(MacroAction):
         super().__init__()
         self._actions = PlaceTreeTap.class_actions
         self._encoder = PlaceTreeTap.class_encoder
+
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        if (
+            action == 0
+            and state["blockInFront"][0] == 1
+            and state["inventory"][items_decoder["polycraft:tree_tap"]] > 0
+        ):
+            return self._actions[action]
+        else:
+            return ["NOP"]
 
 
 class TP_Update:

@@ -44,7 +44,7 @@ class SingleActionDecoder(ActionsDecoder):
         }
 
     # overriding abstract method
-    def decode_action_type(self, action: List[int]) -> List[str]:
+    def decode_action_type(self, action: List[int], state: Dict) -> List[str]:
         """Decode the action type from list of int to polycraft action string"""
         single_action = action[0]
         if single_action >= self.get_actions_size():
@@ -58,7 +58,11 @@ class SingleActionDecoder(ActionsDecoder):
                 break
             single_action -= size
 
-        return [self.actions_list[index].actions[single_action]]
+        return [
+            self.actions_list[index].meet_requirements(
+                single_action, state, self.items_decoder
+            )
+        ]
 
     # overriding abstract method
     def encode_action_type(self, action: str) -> List[int]:

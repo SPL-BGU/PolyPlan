@@ -58,6 +58,32 @@ class Craft(MacroAction):
         self._actions[2][0] = f"TP_TO {location}"
         self._actions[3][0] = f"TP_TO {location}"
 
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        if (
+            (action == 0)
+            or (action == 1)
+            or (
+                action == 2
+                and state["inventory"][items_decoder["minecraft:planks"]] > 4
+                and state["inventory"][items_decoder["minecraft:stick"]] > 0
+            )
+            or (
+                action == 3
+                and state["inventory"][items_decoder["minecraft:planks"]] > 1
+                and state["inventory"][items_decoder["minecraft:stick"]] > 3
+                and state["inventory"][
+                    items_decoder["polycraft:sack_polyisoprene_pellets"]
+                ]
+                > 0
+            )
+        ):
+            return self._actions[action]
+        else:
+            return ["NOP"]
+
 
 class PlaceTreeTap(MacroAction):
     class_actions = {0: ["NOP", "MOVE D", "PLACE_TREE_TAP", "COLLECT"]}
@@ -70,6 +96,15 @@ class PlaceTreeTap(MacroAction):
 
     def update(self, location: str) -> None:
         self._actions[0][0] = f"TP_TO {location}"
+
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        if action == 0 and state["inventory"][items_decoder["polycraft:tree_tap"]] > 0:
+            return self._actions[action]
+        else:
+            return ["NOP"]
 
 
 class TP_Update:
