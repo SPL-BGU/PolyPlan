@@ -22,11 +22,12 @@ class ENHSP:
         if java_version < 15:
             raise Exception("Please use JAVA 15 or higher")
 
-    def create_plan(self, domain, problem) -> list:
+    def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
         """
         Create a plan for the given domain and problem
         :param domain: the domain file - must be located in the planning folder
         :param problem: the problem file - must be located in the planning folder
+        :param timeout: the timeout for the planner in seconds
         """
 
         # Check if the domain and problem files exist
@@ -43,6 +44,13 @@ class ENHSP:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+
+        try:
+            planner.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            print(f"Can't find a plan in {timeout} seconds")
+            planner.kill()
+            return []
 
         for line in planner.stderr:
             planner.kill()

@@ -25,9 +25,9 @@ class TP(MacroAction):
         self._actions[0][0] = f"TP_TO {crafting_table_location}"
         self._encoder = {}
         self._encoder[f"TP_TO {crafting_table_location}"] = 0
-        for i in range(1, len(trees_location)):
-            self._actions[i][0] = f"TP_TO {trees_location[i]}"
-            self._encoder[f"TP_TO {trees_location[i]}"] = i
+        for i in range(0, len(trees_location)):
+            self._actions[i + 1][0] = f"TP_TO {trees_location[i]}"
+            self._encoder[f"TP_TO {trees_location[i]}"] = i + 1
 
 
 class TP_Update:

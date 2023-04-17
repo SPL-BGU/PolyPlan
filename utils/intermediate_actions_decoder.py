@@ -69,34 +69,38 @@ class IntermediateActionsDecoder(ActionsDecoder):
         ):  # if break or place tree tap and not looking at log
             return ["NOP"]
 
-        if action < 6:
-            state["position"][0] = action
-
-        if action == 6:
-            state["gameMap"][state["position"][0]] = 0
-
-        if action == 9 or action == 10:
-            state["position"][0] = 0
-
+        act = action
         for index, size in self.actions_size.items():
-            if action < size:
+            if act < size:
                 break
-            action -= size
+            act -= size
 
-        return self.advanced_actions[index].meet_requirements(
-            action, state, self.items_decoder
+        actions = self.advanced_actions[index].meet_requirements(
+            act, state, self.items_decoder
         )
+
+        if actions[0] != "NOP":
+            if action < 6:
+                state["position"][0] = action
+
+            if action == 6:
+                state["gameMap"][state["position"][0]] = 0
+
+            if action == 9 or action == 10:
+                state["position"][0] = 0
+
+        return actions
 
     # overriding abstract method
     def encode_action_type(self, action: str) -> int:
         """Encode the action type from planning level string to int"""
         if action.startswith("TP_TO"):
-            position = int(action.split(" ")[1])
+            position = int(action.split(" ")[2].replace("cell", ""))
             return position
 
         for i, dic in self.actions_encoder.items():
             for act, j in dic.items():
-                if action == act:
+                if action.startswith(act):
                     return j + sum(list(self.actions_size.values())[:i])
 
         raise ValueError(f"encode not found action '{action}'")
