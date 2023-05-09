@@ -9,10 +9,10 @@ class ExploreOnlyLegal(PolycraftAgent):
 
     def __init__(self, env):
         super().__init__(env)
-        self.action_space = self.env.action_space
-        self.graph = pd.DataFrame(columns=range(self.action_space.n), dtype=np.float64)
+        self.action_space = self.env.action_space.n
+        self.graph = pd.DataFrame(columns=range(self.action_space), dtype=np.float64)
 
-        self.action_count = [1] * self.action_space.n
+        self.action_count = [1] * self.action_space
 
         # for update useless actions
         self.last_state = None
@@ -57,4 +57,4 @@ class ExploreOnlyLegal(PolycraftAgent):
     def check_state_exist(self, state):
         if state not in self.graph.index:
             # append new state to the graph
-            self.graph.loc[state] = [1] * self.action_space.n
+            self.graph.loc[state] = [1] * self.action_space

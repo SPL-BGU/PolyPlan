@@ -1,4 +1,11 @@
-gym==0.21.0
-imitation==0.3.1
-stable_baselines3==1.6.0
+gym==0.26.2
+imitation==0.3.2
+stable_baselines3==1.8.0
 tensorboard==2.7.0
+networkx==3.1
+numpy==1.24.2
+observations==0.1.4
+pandas==2.0.1
+pddl_plus_parser==3.3.10
+sb3_contrib==1.8.0
+tqdm==4.65.0

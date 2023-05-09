@@ -7,14 +7,24 @@ import cProfile, pstats
 import config as CONFIG
 from stable_baselines3.common.evaluation import evaluate_policy
 
-from envs import BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft
-from polycraft_policy import PolycraftPPOPolicy, PolycraftDQNPolicy
+from envs import (
+    BasicMinecraft,
+    IntermediateMinecraft,
+    AdvancedMinecraft,
+    MaskedMinecraft,
+)
+from polycraft_policy import (
+    PolycraftPPOPolicy,
+    PolycraftMaskedPPOPolicy,
+    PolycraftDQNPolicy,
+)
 
 from agents import QLearningAgent
 from planning.enhsp import ENHSP
 from agents import FixedScriptAgent
 
 from stable_baselines3 import PPO, DQN
+from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 
@@ -47,8 +57,10 @@ def train_rl_agent(
         record_trajectories (bool, optional): whether to record trajectories for planning. Defaults to False.
     """
 
-    if learning_method not in ["BC", "DQN", "PPO", "GAIL"]:
-        raise ValueError("learning method must be one of BC, DQN, PPO, GAIL")
+    if learning_method not in ["BC", "DQN", "PPO", "GAIL", "Masked-PPO"]:
+        raise ValueError(
+            "learning method must be one of BC, DQN, PPO, GAIL, Masked-PPO"
+        )
 
     env = RecordEpisodeStatistics(env, deque_size=5000)
 
@@ -65,7 +77,7 @@ def train_rl_agent(
 
     print("Start training")
 
-    if learning_method not in ["PPO", "DQN"]:
+    if learning_method not in ["PPO", "DQN", "Masked-PPO"]:
         # load expert trajectory
         with open("expert_trajectory.pkl", "rb") as fp:
             rollouts = pickle.load(fp)
@@ -127,14 +139,24 @@ def train_rl_agent(
 
     else:  # PPO or GAIL
         # agent
-        model = PPO(
-            PolycraftPPOPolicy,
-            env,
-            verbose=1,
-            n_steps=epoch,
-            batch_size=batch_size,
-            tensorboard_log=logdir,
-        )
+        if learning_method == "Masked-PPO":
+            model = MaskablePPO(
+                PolycraftMaskedPPOPolicy,
+                env,
+                verbose=1,
+                n_steps=epoch,
+                batch_size=batch_size,
+                tensorboard_log=logdir,
+            )
+        else:
+            model = PPO(
+                PolycraftPPOPolicy,
+                env,
+                verbose=1,
+                n_steps=epoch,
+                batch_size=batch_size,
+                tensorboard_log=logdir,
+            )
 
         if learning_method == "GAIL":
             # behavior cloning using GAIL
@@ -279,9 +301,9 @@ def evaluate(env, model):
         rewards, _ = evaluate_policy(
             model=model,
             env=env,
-            n_eval_episodes=5,
+            n_eval_episodes=1,
             return_episode_rewards=True,
-            deterministic=False,
+            deterministic=True,
         )
         avg.append(sum(rewards) / len(rewards))
 
@@ -290,9 +312,13 @@ def evaluate(env, model):
 
 
 def main():
-
-    env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft
-    minecraft = [BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft][env_index]
+    env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft, 3: MaskedMinecraft
+    minecraft = [
+        BasicMinecraft,
+        IntermediateMinecraft,
+        AdvancedMinecraft,
+        MaskedMinecraft,
+    ][env_index]
 
     # only start pal
     # env = minecraft(visually=True, start_pal=True, keep_alive=True)
@@ -301,9 +327,22 @@ def main():
     # return
 
     env = minecraft(visually=True, start_pal=True, keep_alive=False)
-    learning_method = ["BC", "Q-Learning", "DQN", "PPO", "GAIL"][0]
+
+    learning_index = (
+        0  # 0: Planning, 1: BC, 2: Q-Learning, 3: DQN, 4: PPO, 5: GAIL, 6: Masked-PPO
+    )
+    learning_method = [
+        "Planning",
+        "BC",
+        "Q-Learning",
+        "DQN",
+        "PPO",
+        "GAIL",
+        "Masked-PPO",
+    ][learning_index]
     timesteps: int = 1024
 
+    # train the model
     if learning_method == "Q-Learning":
         train_with_qlearning(env, "online", timesteps, record_trajectories=True)
     else:
@@ -321,23 +360,25 @@ def main():
     #     model.load("models/qlearning_online/1/qtable_100_episodes.csv")
     # elif learning_method == "DQN":
     #     model = DQN.load(f"models/{learning_method}/1/DQN_1024_steps.zip", env=env)
-    # else:  # PPO or GAIL
+    # elif learning_method == "PPO" or learning_method == "GAIL":
     #     model = PPO.load(f"models/{learning_method}/1/PPO_1024_steps.zip", env=env)
+    # elif learning_method == "Masked-PPO":
+    #     model = MaskablePPO.load(f"models/{learning_method}/1/Masked-PPO_1024_steps.zip", env=env)
+    # else:  # Planning
+    #     if env_index == 0:
+    #         domain = "planning/basic_minecraft_domain.pddl"
+    #         problem = "planning/basic_minecraft_problem.pddl"
+    #     elif env_index == 1:
+    #         domain = "planning/intermediate_minecraft_domain.pddl"
+    #         problem = "planning/intermediate_minecraft_problem.pddl"
+    #     else:
+    #         domain = "planning/advanced_minecraft_domain.pddl"
+    #         problem = "planning/advanced_minecraft_problem.pddl"
 
-    # if env_index == 0:
-    #     domain = "planning/basic_minecraft_domain.pddl"
-    #     problem = "planning/basic_minecraft_problem.pddl"
-    # elif env_index == 1:
-    #     domain = "planning/intermediate_minecraft_domain.pddl"
-    #     problem = "planning/intermediate_minecraft_problem.pddl"
-    # else:
-    #     domain = "planning/advanced_minecraft_domain.pddl"
-    #     problem = "planning/advanced_minecraft_problem.pddl"
-
-    # enhsp = ENHSP()
-    # plan = enhsp.create_plan(domain, problem)
-    # # print(plan)
-    # model = FixedScriptAgent(env, script=plan)
+    #     enhsp = ENHSP()
+    #     plan = enhsp.create_plan(domain, problem)
+    #     # print(plan)
+    #     model = FixedScriptAgent(env, script=plan)
 
     # evaluate(env, model)
 
