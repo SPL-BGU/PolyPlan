@@ -85,7 +85,6 @@ class IntermediateMinecraft(PolycraftGymEnv):
         self.decoder.agent_state = self._state
 
     def reset(self) -> np.ndarray:
-
         # reset the environment
         self.server_controller.send_command(f"RESET domain {self._domain_path}")
         if self.pal_owner:
@@ -108,10 +107,11 @@ class IntermediateMinecraft(PolycraftGymEnv):
             [2, 1, 1, 1, 1, 1],
             dtype=np.uint8,
         )
+        self.state = flatten(self._observation_space, self._state)
         self.rounds_left = self.max_rounds
         return self.state
 
-    def step(self, action: Union[List[int], int]) -> np.ndarray:
+    def step(self, action: int) -> tuple:
         last_pos = self._state["position"][0]
         state, reward, done, info = super().step(action)
         info["last_pos"] = last_pos

@@ -360,10 +360,14 @@ def main():
     #     model.load("models/qlearning_online/1/qtable_100_episodes.csv")
     # elif learning_method == "DQN":
     #     model = DQN.load(f"models/{learning_method}/1/DQN_1024_steps.zip", env=env)
-    # elif learning_method == "PPO" or learning_method == "GAIL":
+    # elif learning_method == "PPO":
     #     model = PPO.load(f"models/{learning_method}/1/PPO_1024_steps.zip", env=env)
+    # elif learning_method == "GAIL":
+    #     model = PPO.load(f"models/{learning_method}/1/GAIL_1024_steps.zip", env=env)
     # elif learning_method == "Masked-PPO":
-    #     model = MaskablePPO.load(f"models/{learning_method}/1/Masked-PPO_1024_steps.zip", env=env)
+    #     model = MaskablePPO.load(
+    #         f"models/{learning_method}/1/Masked-PPO_1024_steps.zip", env=env
+    #     )
     # else:  # Planning
     #     if env_index == 0:
     #         domain = "planning/basic_minecraft_domain.pddl"

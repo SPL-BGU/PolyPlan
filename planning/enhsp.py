@@ -52,7 +52,13 @@ class ENHSP:
             planner.kill()
             return []
 
+        exception_flag = False
         for line in planner.stderr:
+            exception_flag = True
+            if "Goal is not reachable" in str(line):
+                exception_flag = False
+                break
+        if exception_flag:
             planner.kill()
             raise Exception("unknowned error")
 

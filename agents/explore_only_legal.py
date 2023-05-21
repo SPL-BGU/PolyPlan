@@ -24,7 +24,7 @@ class ExploreOnlyLegal(PolycraftAgent):
 
     # overriding abstract method
     def choose_action(self, state=None) -> int:
-        """Sample action and learn which action is legal"""
+        """Sample action that least used in the state and learn which action is legal"""
         state = str(state)
         self.check_state_exist(state)
 
@@ -58,3 +58,9 @@ class ExploreOnlyLegal(PolycraftAgent):
         if state not in self.graph.index:
             # append new state to the graph
             self.graph.loc[state] = [1] * self.action_space
+
+    def save(self, path):
+        self.graph.to_csv(path)
+
+    def load(self, path):
+        self.graph = pd.read_csv(path)
