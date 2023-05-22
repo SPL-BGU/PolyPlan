@@ -65,9 +65,13 @@ class ActionsDecoder(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def encode_action_type(self):
+    def encode_human_action_type(self, action):
         """Encode the action type from planning level"""
         raise NotImplementedError
+
+    def encode_planning_action_type(self, action):
+        """Encode the planning action to gym action"""
+        return self.encode_human_action_type(action)
 
     @abstractmethod
     def decode_to_planning(self):

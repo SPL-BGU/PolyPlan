@@ -46,3 +46,12 @@ class ServerController:
     def close_connection(self) -> None:
         """Close the connection to the Polycraft server."""
         self.sock.close()
+
+
+if __name__ == "__main__":
+    # Test the server controller.
+    server_controller = ServerController()
+    server_controller.open_connection()
+    while user_input := input("Enter a command: "):
+        print(server_controller.send_command(user_input))
+    server_controller.close_connection()

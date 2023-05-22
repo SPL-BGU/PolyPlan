@@ -57,7 +57,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
 
     # overriding abstract method
     def decode_action_type(self, action: int, state: Dict) -> List[str]:
-        """Decode the action type from list of int to polycraft action string"""
+        """Decode the gym action to polycraft server action"""
         if action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{action}'")
 
@@ -78,8 +78,8 @@ class AdvancedActionsDecoder(ActionsDecoder):
         )
 
     # overriding abstract method
-    def encode_action_type(self, action: str) -> int:
-        """Encode the action type from planning level string to list of int"""
+    def encode_human_action_type(self, action: str) -> int:
+        """Encode the human readable action to gym action"""
         if action.startswith("TP_TO"):
             action = action.split(" ")[1].split(",")
             position = (int(action[0]) - 1) + ((int(action[1]) - 1) * 30)
@@ -92,9 +92,22 @@ class AdvancedActionsDecoder(ActionsDecoder):
 
         raise ValueError(f"encode not found action '{action}'")
 
+    def encode_planning_action_type(self, action):
+        """Encode the planning action to gym action"""
+        if action.startswith("TP_TO"):
+            position = int(action.split(" ")[2].replace("cell", ""))
+            return position
+
+        for i, dic in self.actions_encoder.items():
+            for act, j in dic.items():
+                if action.startswith(act):
+                    return j + sum(list(self.actions_size.values())[:i])
+
+        raise ValueError(f"encode not found action '{action}'")
+
     # overriding abstract method
     def decode_to_planning(self, action: int) -> str:
-        """Decode the action type from list of int to planning level string"""
+        """Decode the gym action to planning action"""
         location = self.agent_state["position"][0]
         if action < 900:
             return f"TP_TO cell{location} cell{action}"

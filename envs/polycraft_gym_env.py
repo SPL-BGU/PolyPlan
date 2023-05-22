@@ -31,7 +31,6 @@ class PolycraftGymEnv(Env):
         rounds: int = 64,
         decoder: ActionsDecoder = SingleActionDecoder(),
     ):
-
         # start polycraft server
         self._q = queue.Queue()
 
@@ -158,12 +157,14 @@ class PolycraftGymEnv(Env):
         return self.state, float(self.reward), done, info
 
     def is_game_over(self) -> bool:
-        done = bool(self.reward) or (self.rounds_left == 0)
+        done = (self.reward == 1) or (self.rounds_left == 0)
         self.done = done
         return done
 
-    def reset(self) -> np.ndarray:
+    def move_to_start(self) -> None:
+        pass
 
+    def reset(self) -> np.ndarray:
         # reset the environment
         self.server_controller.send_command(f"RESET domain {self._domain_path}")
         if self.pal_owner:
@@ -176,6 +177,7 @@ class PolycraftGymEnv(Env):
         self.decoder.update_tp(sense_all)
 
         # reset the state
+        self.move_to_start()
         self.collected_reward = 0
         self.action = None
         self.done = False
@@ -209,6 +211,8 @@ class PolycraftGymEnv(Env):
 
         # get the state from the Polycraft server
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+
+        inventory_before = self._state["inventory"].copy()
 
         self._state["blockInFront"][0] = self.decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
@@ -251,10 +255,25 @@ class PolycraftGymEnv(Env):
             gameMap[location[0]][location[2]][1] = int(game_block["isAccessible"])
         self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
 
-        # update the reward, binary reward - achieved the goal or not
-        self.reward = (
-            int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
-        )
+        inventory_after = self._state["inventory"].copy()
+
+        # update the reward - reward bigger when item is more rare
+        reward = 0
+        change = [int(inventory_after[i]) - int(inventory_before[i]) for i in range(6)]
+        if change[0] > 0:  # log
+            reward += 0.002
+        if change[1] > 0:  # planks
+            reward += 0.004
+        if change[2] > 0:  # sticks
+            reward += 0.004
+        if change[3] == 1 and inventory_after[3] == 1:  # first time get rubber
+            reward = 0.1
+        if change[4] > 0:  # tree tap
+            reward += 0.1
+        if change[5] > 0:  # wooden pogo
+            reward += 1
+
+        self.reward = reward
         self.collected_reward += self.reward
 
         self.state = flatten(self._observation_space, self._state)

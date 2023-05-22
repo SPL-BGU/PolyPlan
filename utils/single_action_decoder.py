@@ -45,7 +45,7 @@ class SingleActionDecoder(ActionsDecoder):
 
     # overriding abstract method
     def decode_action_type(self, action: List[int], state: Dict) -> List[str]:
-        """Decode the action type from list of int to polycraft action string"""
+        """Decode the gym action to polycraft server action"""
         single_action = action[0]
         if single_action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{single_action}'")
@@ -65,8 +65,8 @@ class SingleActionDecoder(ActionsDecoder):
         ]
 
     # overriding abstract method
-    def encode_action_type(self, action: str) -> List[int]:
-        """Encode the action type from planning level string to list of int"""
+    def encode_human_action_type(self, action: str) -> List[int]:
+        """Encode the human readable action to gym action"""
         if action.startswith("TP_TO"):
             action = action.split(" ")[1].split(",")
             return [8, int(action[0]), int(action[1])]
@@ -80,7 +80,7 @@ class SingleActionDecoder(ActionsDecoder):
 
     # overriding abstract method
     def decode_to_planning(self, action: List[int]) -> str:
-        """Decode the action type from list of int to planning level string"""
+        """Decode the gym action to planning action"""
         single_action = action[0]
         for i, dic in self.actions_encoder.items():
             for act, j in dic.items():

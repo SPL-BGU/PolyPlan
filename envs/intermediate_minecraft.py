@@ -61,8 +61,8 @@ class IntermediateMinecraft(PolycraftGymEnv):
         # current state start with all zeros
         self._state = OrderedDict(
             {
-                "blockInFront": np.zeros(
-                    (1,),
+                "blockInFront": np.array(
+                    [2],
                     dtype=np.uint8,
                 ),
                 "gameMap": np.array(
@@ -84,32 +84,12 @@ class IntermediateMinecraft(PolycraftGymEnv):
         self.max_rounds = 128
         self.decoder.agent_state = self._state
 
-    def reset(self) -> np.ndarray:
-        # reset the environment
-        self.server_controller.send_command(f"RESET domain {self._domain_path}")
-        if self.pal_owner:
-            while "game initialization completed" not in str(self._next_line):
-                self._next_line = self._check_queues()
-        time.sleep(2)
-
-        # reset the teleport according to the new domain
-        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
-        self.decoder.update_tp(sense_all)
-
-        # reset the state
-        self.collected_reward = 0
-        self.action = None
-        self.done = False
+    def move_to_start(self) -> None:
         self.step(0)
-
-        self._state["position"][0] = 0
         self._state["gameMap"] = np.array(
             [2, 1, 1, 1, 1, 1],
             dtype=np.uint8,
         )
-        self.state = flatten(self._observation_space, self._state)
-        self.rounds_left = self.max_rounds
-        return self.state
 
     def step(self, action: int) -> tuple:
         last_pos = self._state["position"][0]
@@ -123,8 +103,6 @@ class IntermediateMinecraft(PolycraftGymEnv):
 
         # get the state from the Polycraft server
         sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
-
-        inventory_before = self._state["inventory"].copy()
 
         self._state["blockInFront"][0] = self.decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
@@ -142,33 +120,12 @@ class IntermediateMinecraft(PolycraftGymEnv):
             inventory[self.decoder.decode_item_type(item["item"])] = item["count"]
         self._state["inventory"] = inventory
 
-        inventory_after = self._state["inventory"].copy()
-
-        # update the reward
-        reward = 0
-        change = [int(inventory_after[i]) - int(inventory_before[i]) for i in range(6)]
-        if change[0] > 0:  # log
-            reward += 1
-        if change[1] > 0:  # planks
-            reward += 2
-        if change[2] > 0:  # sticks
-            reward += 2
-        if change[3] == 1 and inventory_after[3] == 1:  # first time get rubber
-            reward = 50
-        if change[4] > 0:  # tree tap
-            reward += 50
-        if change[5] > 0:  # wooden pogo
-            reward += 500
-
-        # update the reward
-        self.reward = reward
+        # update the reward, binary reward - achieved the goal or not
+        self.reward = (
+            int(sense_all["goal"]["goalAchieved"]) if "goal" in sense_all else 0
+        )
         self.collected_reward += self.reward
 
         self.state = flatten(self._observation_space, self._state)
 
         return self.reward
-
-    def is_game_over(self) -> bool:
-        done = (self.reward == 500) or (self.rounds_left == 0)
-        self.done = done
-        return done
