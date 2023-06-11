@@ -17,3 +17,7 @@ class SmartAgent(PolycraftAgent):
         if type(predictions) is ndarray:
             return random_choice(predictions)
         return predictions
+
+    def predict(self, observations, state, episode_start, deterministic) -> tuple:
+        """Wrapper for gym predict function."""
+        return self.model.predict(observations, state, episode_start, deterministic)

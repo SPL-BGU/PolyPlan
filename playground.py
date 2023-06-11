@@ -210,8 +210,6 @@ def train_rl_agent(
                 callback=callback,
             )
 
-    Logger.save_log(env, f"{logdir}/output.csv")
-
     print("Done training")
 
 
@@ -249,14 +247,13 @@ def train_with_qlearning(
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
 
-    n_episodes = timesteps // env.max_rounds
-
     if record_trajectories:
         rec_dir = f"{logdir}/solutions"
         if not os.path.exists(rec_dir):
             os.makedirs(rec_dir)
+        callback = Logger.RecordTrajectories(output_dir=rec_dir)
     else:
-        rec_dir = None
+        callback = None
 
     if learning_method == "online":
         agent = QLearningAgent(
@@ -265,10 +262,8 @@ def train_with_qlearning(
             epsilon_decay=0.01,
             save_path=models_dir,
             save_interval=50,
-            output_dir=rec_dir,
-            record_trajectories=record_trajectories,
         )
-        agent.learn(n_episodes)
+        agent.learn(timesteps, callback)
     else:  # offline
         agent = QLearningAgent(
             env,
@@ -288,7 +283,7 @@ def train_with_qlearning(
 
         expert = FixedScriptAgent(env, filename=filename)
 
-        agent.learn(n_episodes, expert)
+        agent.learn(timesteps, callback, expert)
 
     print("Done training")
 
@@ -357,7 +352,7 @@ def main():
     #         initial_epsilon=0,
     #         final_epsilon=0,
     #     )
-    #     model.load("models/qlearning_online/1/qtable_100_episodes.csv")
+    #     model.load_table("models/qlearning_online/1/qtable_100_episodes.csv")
     # elif learning_method == "DQN":
     #     model = DQN.load(f"models/{learning_method}/1/DQN_1024_steps.zip", env=env)
     # elif learning_method == "PPO":

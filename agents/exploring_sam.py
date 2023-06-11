@@ -1,5 +1,7 @@
 from agents.polycraft_agent import PolycraftAgent
-from tqdm import tqdm
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
+from stable_baselines3.common.type_aliases import MaybeCallback
+from utils import Logger
 import config as CONFIG
 
 import os
@@ -21,6 +23,29 @@ import logging
 
 os.environ["CONVEX_HULL_ERROR_PATH"] = "tests/temp_files/ch_error.txt"
 logging.root.setLevel(logging.ERROR)
+
+
+class Explore(BaseCallback):
+    """
+    auxiliary function for exploring the environment
+
+    :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
+    :param save_interval: interval to activate NSAM
+    """
+
+    def __init__(self, verbose=0, save_interval=1):
+        super().__init__(verbose)
+        self.episodes = 0
+        self.save_interval = save_interval
+
+    def _on_step(self) -> bool:
+        return True
+
+    def _on_rollout_end(self) -> None:
+        self.episodes += 1
+        if self.episodes % self.save_interval == 0:
+            plan = self.model.active_nsam()
+            self.model.save_plan(plan)
 
 
 class ExploringSam(PolycraftAgent):
@@ -54,6 +79,7 @@ class ExploringSam(PolycraftAgent):
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
         self.enhsp = ENHSP()
+        self.eval = False
 
         self.output_dir = output_dir
         shutil.copyfile(domain, f"{output_dir}/domain.pddl")
@@ -63,56 +89,38 @@ class ExploringSam(PolycraftAgent):
         # logger
         self.save_path = save_path
         self.save_interval = save_interval
-        self.num_timesteps = 0
-        self.episode = 0
 
     # overriding abstract method
     def choose_action(self, state=None) -> int:
         """Use explorer to sample action"""
+        # TODO: add if in eval mode use ENHSP
         return self.explorer.choose_action(state)
 
-    # add learn action, add each episode active sam, if got expert active diffrent choose action
-    def learn(self, n_episodes: int):
-        """Explore the environment and search for new state to explore.
-        if got expert, use expert to choose action"""
+    def learn(self, total_timesteps: int, callback: MaybeCallback = None):
+        """Learn the policy for a total of `total_timesteps` steps."""
 
         if self.explorer is None:
             raise Exception("E-SAM must have an explorer agent in order to work.")
 
-        file = open(f"{self.output_dir}/pfile0.solution", "w")
+        explore_callback = Explore(save_interval=self.save_interval)
+        logger_callback = Logger.RecordTrajectories(output_dir=self.output_dir)
+        self.eval = False
 
-        for _ in tqdm(range(n_episodes)):
-            state = self.env.reset()
-            done = False
+        if callback is None:
+            callback = [logger_callback, explore_callback]
+        elif isinstance(callback, CallbackList):
+            callback = callback.callbacks
+        if isinstance(callback, list):
+            for cb in callback:
+                if isinstance(cb, Logger.RecordTrajectories):
+                    callback.remove(cb)  # remove duplicate callback
+            callback.append(logger_callback)
+            callback.append(explore_callback)
 
-            self.last_state = None
-            self.last_action = None
-            self.pre_state = None
-            self.pre_action = None
-
-            # play one episode
-            while not done:
-                action = self.choose_action(state)
-
-                # save action
-                act = self.env.decoder.decode_to_planning(action)
-                file.write(f"({act})\n")
-
-                next_state, _, done, _ = self.env.step(action)
-
-                # update if the environment is done and the current obs
-                state = next_state
-
-            self.episode += 1
-
-            file.close()
-            file = open(f"{self.output_dir}/pfile{self.episode}.solution", "w")
-
-            # add to logger
-            self.num_timesteps += 1
-            if self.num_timesteps % self.save_interval == 0:
-                plan = self.active_nsam()
-                self.save(plan)
+        super().learn(
+            total_timesteps=total_timesteps,
+            callback=callback,
+        )
 
     def active_nsam(self):
         """Active N-SAM to learn the action model and return the plan"""
@@ -134,7 +142,7 @@ class ExploringSam(PolycraftAgent):
             SOLUTIONS_PATH / "domain.pddl", partial_parsing=True
         ).parse_domain()
         depot_problem = ProblemParser(
-            SOLUTIONS_PATH / f"problem.pddl", domain=depot_partial_domain
+            SOLUTIONS_PATH / "problem.pddl", domain=depot_partial_domain
         ).parse_problem()
         with open(SOLUTIONS_PATH / "fluents_map.json", "rt") as json_file:
             depot_fluents_map = json.load(json_file)
@@ -167,16 +175,16 @@ class ExploringSam(PolycraftAgent):
 
         return plan
 
-    def save(self, plan):
+    def save_plan(self, plan):
         """Save the plan"""
         if len(plan) == 0:
             print(f"score: 0, length: {self.env.max_rounds}")
         else:
             print(f"score: 1, length: {len(plan)}")
 
-        with open(f"{self.save_path}/plan{self.episode}.txt", "w") as file:
+        with open(f"{self.save_path}/plan{self.episodes}.txt", "w") as file:
             file.write("\n".join(plan))
 
-    def load(self, path):
+    def load_plan(self, path):
         """Change the output_dir to path"""
         self.output_dir = path

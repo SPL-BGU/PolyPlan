@@ -59,8 +59,8 @@ class ExploreOnlyLegal(PolycraftAgent):
             # append new state to the graph
             self.graph.loc[state] = [1] * self.action_space
 
-    def save(self, path):
+    def save_table(self, path):
         self.graph.to_csv(path)
 
-    def load(self, path):
+    def load_table(self, path):
         self.graph = pd.read_csv(path)

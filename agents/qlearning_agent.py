@@ -1,3 +1,5 @@
+from stable_baselines3.common.type_aliases import MaybeCallback
+from stable_baselines3.common.vec_env import DummyVecEnv
 from agents.polycraft_agent import PolycraftAgent
 import numpy as np
 import pandas as pd
@@ -17,8 +19,6 @@ class QLearningAgent(PolycraftAgent):
         discount_factor: float = 0.99,
         save_path: str = "qlearning/",
         save_interval: int = 100,
-        output_dir: str = "solutions",
-        record_trajectories: bool = False,
     ):
         """Initialize a Reinforcement Learning agent with an empty dictionary
         of state-action values (q_table), a learning rate and an epsilon.
@@ -36,6 +36,7 @@ class QLearningAgent(PolycraftAgent):
         self.q_table = pd.DataFrame(
             columns=range(self.action_space.n), dtype=np.float64
         )
+        self.eval = False
 
         self.lr = learning_rate
         self.discount_factor = discount_factor
@@ -48,13 +49,6 @@ class QLearningAgent(PolycraftAgent):
         self.save_interval = save_interval
         self.num_timesteps = 0
 
-        self.episode = 0
-        if record_trajectories:
-            self.output_dir = output_dir
-            self.file = open(f"{output_dir}/pfile0.solution", "w")
-        else:
-            self.file = None
-
         self.training_error = []
 
     # overriding abstract method
@@ -66,6 +60,9 @@ class QLearningAgent(PolycraftAgent):
 
         state = str(state)
         self.check_state_exist(state)
+
+        if self.eval:
+            return int(np.argmax(self.q_table.loc[state]))
 
         # with probability epsilon return a random action to explore the environment
         if np.random.random() < self.epsilon:
@@ -81,7 +78,6 @@ class QLearningAgent(PolycraftAgent):
         self.check_state_exist(trajectory[-1][-1])
         trajectory.reverse()
         for state, action, reward, terminated, next_state in trajectory:
-
             future_q_value = (not terminated) * np.max(self.q_table.loc[next_state])
             temporal_difference = (
                 reward
@@ -102,11 +98,29 @@ class QLearningAgent(PolycraftAgent):
     def decay_epsilon(self):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
 
-    def learn(self, n_episodes: int, expert: PolycraftAgent = None):
+    def learn(
+        self,
+        total_timesteps: int,
+        callback: MaybeCallback = None,
+        expert: PolycraftAgent = None,
+    ):
         """Learns the Q-table by playing n_episodes episodes.
         if expert is not None do offline learning from expert trajectories"""
 
-        for _ in tqdm(range(n_episodes)):
+        # TODO: add callback
+
+        env = DummyVecEnv([lambda: self.env])  # callback use
+
+        # start callback
+        if callback is not None:
+            callback = self._init_callback(callback)
+            callback.on_training_start(locals(), globals())
+
+        self.num_timesteps = 0
+        pbar = tqdm(total=total_timesteps)
+
+        # play n_episodes episodes
+        while self.num_timesteps < total_timesteps:
             state = self.env.reset()
             done = False
 
@@ -119,11 +133,7 @@ class QLearningAgent(PolycraftAgent):
                     action = expert.choose_action(state)
                 else:
                     action = self.choose_action(state)
-
-                # save action
-                if self.file:
-                    act = self.env.decoder.decode_to_planning(action)
-                    self.file.write(f"({act})\n")
+                actions = [action]  # callback use
 
                 next_state, reward, done, _ = self.env.step(action)
 
@@ -133,27 +143,39 @@ class QLearningAgent(PolycraftAgent):
                 # update if the environment is done and the current obs
                 state = next_state
 
+                # update callback
+                if callback is not None:
+                    callback.update_locals(locals())
+                    if callback.on_step() is False:
+                        break
+
+                self.num_timesteps += 1
+
             # update the agent
             self.update(trajectory)
-
-            self.episode += 1
-
-            if self.file:
-                self.file.close()
-                self.file = open(f"{self.output_dir}/pfile{self.episode}.solution", "w")
 
             # add to logger
             self.num_timesteps += 1
             if self.num_timesteps % self.save_interval == 0:
-                self.save()
+                self.save_table()
             self.decay_epsilon()
 
-    def save(self):
+            self.episodes += 1
+
+            # rollout end callback
+            if callback is not None:
+                callback.on_rollout_end()
+
+            # Update the progress bar
+            pbar.n = self.num_timesteps
+            pbar.set_postfix({"Episodes": self.episodes})
+
+    def save_table(self):
         """Export the Q-table to a csv file."""
         self.q_table.to_csv(
             f"{self.save_path}/qtable_{self.num_timesteps}_episodes.csv"
         )
 
-    def load(self, path):
+    def load_table(self, path):
         """Load the Q-table from a csv file."""
         self.q_table = pd.read_csv(path, index_col=0).rename(columns=lambda x: int(x))
