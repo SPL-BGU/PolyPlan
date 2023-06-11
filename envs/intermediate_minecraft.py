@@ -81,8 +81,15 @@ class IntermediateMinecraft(PolycraftGymEnv):
         )
         self.state = flatten(self._observation_space, self._state)
 
+        self.last_pos = {
+            "position": np.array(
+                [0],
+                dtype=np.uint8,
+            )
+        }
+
         self.max_rounds = 128
-        self.decoder.agent_state = self._state
+        self.decoder.agent_state = self.last_pos
 
     def move_to_start(self) -> None:
         self.step(0)
@@ -92,10 +99,8 @@ class IntermediateMinecraft(PolycraftGymEnv):
         )
 
     def step(self, action: int) -> tuple:
-        last_pos = self._state["position"][0]
-        state, reward, done, info = super().step(action)
-        info["last_pos"] = last_pos
-        return state, reward, done, info
+        self.last_pos["position"][0] = self._state["position"][0]
+        return super().step(action)
 
     def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""
