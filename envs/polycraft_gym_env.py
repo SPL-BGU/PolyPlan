@@ -170,10 +170,18 @@ class PolycraftGymEnv(Env):
         if self.pal_owner:
             while "game initialization completed" not in str(self._next_line):
                 self._next_line = self._check_queues()
-        time.sleep(2)
+
+        # wait until the domain is loaded
+        while True:
+            sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+            if "map" in sense_all:
+                if "minecraft:crafting_table" in [
+                    tup["name"] for tup in sense_all["map"].values()
+                ]:
+                    break
+            time.sleep(0.1)
 
         # reset the teleport according to the new domain
-        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
         self.decoder.update_tp(sense_all)
 
         # reset the state
