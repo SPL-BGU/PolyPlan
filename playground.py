@@ -46,6 +46,7 @@ def train_rl_agent(
     epoch: int = 256,
     batch_size: int = 64,
     record_trajectories: bool = False,
+    save_freq: int = 1024,
 ):
     """Train RL agent using PPO, BC, or GAIL
 
@@ -55,6 +56,7 @@ def train_rl_agent(
         epoch (int, optional): how much steps to until update the net. Defaults to 256.
         batch_size (int, optional): size of the sub-updated in each epoch. Defaults to 64.
         record_trajectories (bool, optional): whether to record trajectories for planning. Defaults to False.
+        save_freq (int, optional): how often to save the model. Defaults to 1024.
     """
 
     if learning_method not in ["BC", "DQN", "PPO", "GAIL", "Masked-PPO"]:
@@ -85,8 +87,6 @@ def train_rl_agent(
     models_dir = f"models/{learning_method}/{dir_index}"
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
-
-    save_freq = 1024
 
     # checkpoint callback
     checkpoint_callback = CheckpointCallback(
@@ -218,6 +218,7 @@ def train_with_qlearning(
     learning_method: str,
     timesteps: int = 1024,
     record_trajectories: bool = False,
+    save_freq: int = 1024,
 ):
     """Train Q-Learning agent
 
@@ -225,6 +226,7 @@ def train_with_qlearning(
         learning_method (str): one of "offline", "online"
         timesteps (int, optional): number of timesteps to train. Defaults to 1024.
         record_trajectories (bool, optional): whether to record trajectories for planning. Defaults to False.
+        save_freq (int, optional): frequency to save model. Defaults to 1024.
     """
 
     if learning_method not in ["offline", "online"]:
@@ -247,22 +249,26 @@ def train_with_qlearning(
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
 
+    # checkpoint callback
+    checkpoint_callback = CheckpointCallback(
+        save_freq=save_freq, save_path=f"{models_dir}/", name_prefix="Q-Learning"
+    )
+
     if record_trajectories:
         rec_dir = f"{logdir}/solutions"
         if not os.path.exists(rec_dir):
             os.makedirs(rec_dir)
-        callback = Logger.RecordTrajectories(output_dir=rec_dir)
+        callback = CallbackList(
+            [
+                checkpoint_callback,
+                Logger.RecordTrajectories(output_dir=rec_dir),
+            ]
+        )
     else:
-        callback = None
+        callback = checkpoint_callback
 
     if learning_method == "online":
-        agent = QLearningAgent(
-            env,
-            learning_rate=0.1,
-            epsilon_decay=0.01,
-            save_path=models_dir,
-            save_interval=50,
-        )
+        agent = QLearningAgent(env)
         agent.learn(timesteps, callback)
     else:  # offline
         agent = QLearningAgent(
@@ -270,8 +276,6 @@ def train_with_qlearning(
             learning_rate=1,
             initial_epsilon=0,
             final_epsilon=0,
-            save_path=models_dir,
-            save_interval=1,
         )
 
         if type(env) is BasicMinecraft:
@@ -336,23 +340,29 @@ def main():
         "Masked-PPO",
     ][learning_index]
     timesteps: int = 1024
+    save_freq = env.max_rounds * 8
 
     # train the model
     if learning_method == "Q-Learning":
-        train_with_qlearning(env, "online", timesteps, record_trajectories=True)
+        train_with_qlearning(
+            env, "online", timesteps, record_trajectories=True, save_freq=save_freq
+        )
     else:
-        train_rl_agent(env, learning_method, timesteps, record_trajectories=True)
+        train_rl_agent(
+            env,
+            learning_method,
+            timesteps,
+            record_trajectories=True,
+            save_freq=save_freq,
+        )
 
     # load and evaluate the model
     # if learning_method == "BC":
     #     model = bc.reconstruct_policy("models/BC/1/BC_1024_steps.zip")
     # elif learning_method == "Q-Learning":
-    #     model = QLearningAgent(
-    #         env,
-    #         initial_epsilon=0,
-    #         final_epsilon=0,
+    #     model = QLearningAgent.load(
+    #         "models/qlearning_online/1/Q-Learning_1024_steps.zip", env=env
     #     )
-    #     model.load_table("models/qlearning_online/1/qtable_100_episodes.csv")
     # elif learning_method == "DQN":
     #     model = DQN.load(f"models/{learning_method}/1/DQN_1024_steps.zip", env=env)
     # elif learning_method == "PPO":

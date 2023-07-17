@@ -17,8 +17,6 @@ class QLearningAgent(PolycraftAgent):
         epsilon_decay: float = 0.02,
         final_epsilon: float = 0.05,
         discount_factor: float = 0.99,
-        save_path: str = "qlearning/",
-        save_interval: int = 100,
     ):
         """Initialize a Reinforcement Learning agent with an empty dictionary
         of state-action values (q_table), a learning rate and an epsilon.
@@ -44,10 +42,6 @@ class QLearningAgent(PolycraftAgent):
         self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
         self.final_epsilon = final_epsilon
-
-        self.save_path = save_path
-        self.save_interval = save_interval
-        self.num_timesteps = 0
 
         self.training_error = []
 
@@ -107,8 +101,6 @@ class QLearningAgent(PolycraftAgent):
         """Learns the Q-table by playing n_episodes episodes.
         if expert is not None do offline learning from expert trajectories"""
 
-        # TODO: add callback
-
         env = DummyVecEnv([lambda: self.env])  # callback use
 
         # start callback
@@ -116,13 +108,17 @@ class QLearningAgent(PolycraftAgent):
             callback = self._init_callback(callback)
             callback.on_training_start(locals(), globals())
 
-        self.num_timesteps = 0
+        self.num_timesteps = 1
         pbar = tqdm(total=total_timesteps)
 
         # play n_episodes episodes
-        while self.num_timesteps < total_timesteps:
+        while self.num_timesteps <= total_timesteps:
             state = self.env.reset()
             done = False
+
+            # callback on training start
+            if callback is not None:
+                callback.on_rollout_start()
 
             trajectory = []
 
@@ -153,11 +149,6 @@ class QLearningAgent(PolycraftAgent):
 
             # update the agent
             self.update(trajectory)
-
-            # add to logger
-            self.num_timesteps += 1
-            if self.num_timesteps % self.save_interval == 0:
-                self.save_table()
             self.decay_epsilon()
 
             self.episodes += 1
@@ -170,11 +161,9 @@ class QLearningAgent(PolycraftAgent):
             pbar.n = self.num_timesteps
             pbar.set_postfix({"Episodes": self.episodes})
 
-    def save_table(self):
+    def save_table(self, path):
         """Export the Q-table to a csv file."""
-        self.q_table.to_csv(
-            f"{self.save_path}/qtable_{self.num_timesteps}_episodes.csv"
-        )
+        self.q_table.to_csv(f"{path}/qtable_{self.num_timesteps}_episodes.csv")
 
     def load_table(self, path):
         """Load the Q-table from a csv file."""

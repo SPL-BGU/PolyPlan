@@ -79,6 +79,10 @@ class PolycraftAgent(ABC):
             state = self.env.reset()
             done = False
 
+            # callback on training start
+            if callback is not None:
+                callback.on_rollout_start()
+
             # play one episode
             while not done:
                 action = self.choose_action(state)

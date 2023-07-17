@@ -3,7 +3,6 @@ from agents import LearningAgent, FixedScriptAgent
 
 
 def main():
-
     env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft
     minecraft = [BasicMinecraft, IntermediateMinecraft, AdvancedMinecraft][env_index]
 
@@ -14,10 +13,10 @@ def main():
         filename = "agents/scripts/macro_actions_script.txt"
     elif env_index == 1:
         filename = "agents/scripts/intermediate_actions_script.txt"
-    else: # env_index == 2
+    else:  # env_index == 2
         filename = "agents/scripts/advanced_actions_script.txt"
 
-    fixed_script_agent = FixedScriptAgent(env, filename=filename)
+    fixed_script_agent = FixedScriptAgent(env, filename=filename, human_readable=True)
 
     recording = True
     planning = False
