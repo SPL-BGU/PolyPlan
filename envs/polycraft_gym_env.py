@@ -213,12 +213,32 @@ class PolycraftGymEnv(Env):
     def set_domain(self, path: str) -> None:
         self._domain_path = path
 
+    def _senses(self) -> dict:
+        """Sense the environment - return the state"""
+
+        while sense_all := self.server_controller.send_command("SENSE_ALL NONAV"):
+            # sanity check - check sense_all have all the keys
+            if not all(
+                item in sense_all
+                for item in [
+                    "blockInFront",
+                    "inventory",
+                    "map",
+                    "player",
+                ]
+            ):
+                time.sleep(0.1)
+                continue
+            break
+
+        return sense_all
+
     def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""
         self.reward = 0
 
         # get the state from the Polycraft server
-        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+        sense_all = self._senses()
 
         inventory_before = self._state["inventory"].copy()
 

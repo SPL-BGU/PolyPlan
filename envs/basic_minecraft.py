@@ -64,7 +64,7 @@ class BasicMinecraft(PolycraftGymEnv):
         self.reward = 0
 
         # get the state from the Polycraft server
-        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+        sense_all = self._senses()
 
         # update the treeCount
         count: int = 0

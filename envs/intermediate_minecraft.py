@@ -107,7 +107,7 @@ class IntermediateMinecraft(PolycraftGymEnv):
         self.reward = 0
 
         # get the state from the Polycraft server
-        sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+        sense_all = self._senses()
 
         self._state["blockInFront"][0] = self.decoder.decode_block_type(
             sense_all["blockInFront"]["name"]
