@@ -94,6 +94,8 @@ class AdvancedActionsDecoder(ActionsDecoder):
 
     def encode_planning_action_type(self, action):
         """Encode the planning action to gym action"""
+        action = action[1:-1].split(" ")
+        action = action[0].upper() + " " + " ".join(action[1:])
         if action.startswith("TP_TO"):
             position = int(action.split(" ")[2].replace("cell", ""))
             return position

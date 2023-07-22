@@ -1,26 +1,17 @@
 import config as CONFIG
 import subprocess
+
 import os
 
 
-class ENHSP:
+class MetricFF:
     """
-    Create ENHSP for polycraft
-    Where ENHSP_PATH must be updated in the config.py file in order to work
+    Create MetricFF for polycraft
+    Where METRIC_FF_PATH must be updated in the config.py file in order to work
     """
 
     def __init__(self):
-        self.path = CONFIG.ENHSP_PATH
-
-        # Check java version
-        java_version = subprocess.check_output(
-            ["java", "-version"], stderr=subprocess.STDOUT
-        ).decode("utf-8")
-        start_index = java_version.index('"') + 1
-        end_index = java_version.index('"', start_index)
-        java_version = int(java_version[start_index:end_index].split(".")[0])
-        if java_version < 15:
-            raise Exception("Please use JAVA 15 or higher")
+        self.path = CONFIG.METRIC_FF_PATH
 
     def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
         """
@@ -36,7 +27,8 @@ class ENHSP:
         if not os.path.exists(problem):
             raise Exception("Problem file not found")
 
-        cmd = f"java -jar {self.path}/enhsp.jar -o {domain} -f {problem} -planner opt-hrmax"
+        os.chdir(self.path)
+        cmd = f"./ff -o {domain} -f {problem} -s 0"
 
         planner = subprocess.Popen(
             "exec " + cmd,
@@ -55,7 +47,7 @@ class ENHSP:
         exception_flag = False
         for line in planner.stderr:
             exception_flag = True
-            if "Goal is not reachable" in str(line):
+            if "not reachable" in str(line):
                 exception_flag = False
                 break
         if exception_flag:
@@ -64,22 +56,19 @@ class ENHSP:
 
         plan = []
         for line in planner.stdout:
-            if "Problem Solved" in str(line):
+            if "found legal plan as follows" in str(line):
                 line = str(planner.stdout.readline())
-                while "Plan-Length" not in line:
+                while "b'\\n'" not in line:
                     try:
-                        start = line.index("(") + 1
-                        end = line.index(")")
-                        if line[end - 1] == " ":
-                            end -= 1
-                        line = line[start:end]
+                        start = line.index(":") + 2
+                        line = line[start:-3]
                         plan.append(f"({line.lower()})")
                         # print(line)
                     except:
                         pass
                     line = str(planner.stdout.readline())
                 break
-            elif "Problem unsolvable" in str(line):
+            elif "unsolvable" in str(line):
                 # print("Problem unsolvable")
                 break
 

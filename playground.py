@@ -20,8 +20,9 @@ from polycraft_policy import (
 )
 
 from agents import QLearningAgent
-from planning.enhsp import ENHSP
 from agents import FixedScriptAgent
+
+from planning.metric_ff import MetricFF as solver
 
 from stable_baselines3 import PPO, DQN
 from sb3_contrib.ppo_mask import MaskablePPO
@@ -375,17 +376,17 @@ def main():
     #     )
     # else:  # Planning
     #     if env_index == 0:
-    #         domain = "planning/basic_minecraft_domain.pddl"
-    #         problem = "planning/basic_minecraft_problem.pddl"
+    #         domain = f"{os.getcwd()}/planning/basic_minecraft_domain.pddl"
+    #         problem = f"{os.getcwd()}/planning/basic_minecraft_problem.pddl"
     #     elif env_index == 1:
-    #         domain = "planning/intermediate_minecraft_domain.pddl"
-    #         problem = "planning/intermediate_minecraft_problem.pddl"
+    #         domain = f"{os.getcwd()}/planning/intermediate_minecraft_domain.pddl"
+    #         problem = f"{os.getcwd()}/planning/intermediate_minecraft_problem.pddl"
     #     else:
-    #         domain = "planning/advanced_minecraft_domain.pddl"
-    #         problem = "planning/advanced_minecraft_problem.pddl"
+    #         domain = f"{os.getcwd()}/planning/advanced_minecraft_domain.pddl"
+    #         problem = f"{os.getcwd()}/planning/advanced_minecraft_problem.pddl"
 
-    #     enhsp = ENHSP()
-    #     plan = enhsp.create_plan(domain, problem)
+    #     planner = solver()
+    #     plan = planner.create_plan(domain, problem)
     #     # print(plan)
     #     model = FixedScriptAgent(env, script=plan)
 

@@ -7,5 +7,6 @@ EVALUATION_DOMAINS_PATH = [
     f"{PAL_PATH}/available_tests/pogo_nov_lvl-2_type-1b.json",
     f"{PAL_PATH}/available_tests/pogo_nov_lvl-3_type-1.json",
 ]
-ENHSP_PLANNER_PATH = "/home/benjamin/Projects/ENHSP"
+ENHSP_PATH = "/home/benjamin/Projects/ENHSP"
+METRIC_FF_PATH = "/home/benjamin/Projects/METRIC_FF"
 NSAM_PATH = "/home/benjamin/Projects/numeric-sam"
