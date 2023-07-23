@@ -72,7 +72,11 @@ class ActionsDecoder(ABC):
     def encode_planning_action_type(self, action):
         """Encode the planning action to gym action"""
         action = action[1:-1].split(" ")
-        action = action[0].upper() + " " + " ".join(action[1:])
+        if len(action) == 1:
+            action = action[0].upper()
+        else:
+            action = action[0].upper() + " " + " ".join(action[1:])
+
         return self.encode_human_action_type(action)
 
     @abstractmethod
