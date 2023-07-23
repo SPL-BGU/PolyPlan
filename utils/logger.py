@@ -41,6 +41,8 @@ class RecordTrajectories(BaseCallback):
                 )
             elif key == "position":
                 output += "(position cell{})".format(int(value[0]))
+            elif key == "treeCount":
+                output += "(= (trees_in_map ) {}) ".format(int(value[0]))
 
         output += ")"
 
