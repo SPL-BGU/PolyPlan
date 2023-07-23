@@ -1,5 +1,7 @@
+import os
 import numpy as np
 import pandas as pd
+from gym import Wrapper
 from gym.wrappers import RecordEpisodeStatistics
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
@@ -14,9 +16,35 @@ class RecordTrajectories(BaseCallback):
 
     def __init__(self, verbose=0, output_dir="solutions"):
         super().__init__(verbose)
-        self.episodes = 0
+        self.episodes = 1
         self.output_dir = output_dir
-        self.file = open(f"{output_dir}/pfile0.solution", "w")
+        self.file = open(f"{output_dir}/pfile1.trajectory", "w")
+
+    def translate(self, state):
+        output = ""
+        for key, value in state.items():
+            if key == "gameMap":
+                for i, cell_value in enumerate(value):
+                    output += "(= (cell_type cell{}) {}) ".format(i, int(cell_value))
+            elif key == "inventory":
+                output += "(= (count_log_in_inventory ) {}) ".format(int(value[0]))
+                output += "(= (count_planks_in_inventory ) {}) ".format(int(value[1]))
+                output += "(= (count_stick_in_inventory ) {}) ".format(int(value[2]))
+                output += (
+                    "(= (count_sack_polyisoprene_pellets_in_inventory ) {}) ".format(
+                        int(value[3])
+                    )
+                )
+                output += "(= (count_tree_tap_in_inventory ) {}) ".format(int(value[4]))
+                output += "(= (count_wooden_pogo_stick_in_inventory ) {}) ".format(
+                    int(value[5])
+                )
+            elif key == "position":
+                output += "(position cell{})".format(int(value[0]))
+
+        output += ")"
+
+        return output
 
     def _on_step(self) -> bool:
         """
@@ -26,16 +54,31 @@ class RecordTrajectories(BaseCallback):
         """
         env = self.locals["env"].envs[0]
 
+        while issubclass(type(env), Wrapper):
+            env = env.env
+
         action = self.locals["actions"][0]
         action = env.decoder.decode_to_planning(action)
-        self.file.write(f"({action})\n")
+        self.file.write(f"(operator: ({action}))\n")
+        translate = self.translate(env._state)
+        self.file.write(f"(:state {translate}\n")
 
         if env.rounds_left == env.max_rounds or env.done:
+            self.file.write(f")\n")
             self.file.close()
             self.episodes += 1
-            self.file = open(f"{self.output_dir}/pfile{self.episodes}.solution", "w")
+            self.file = open(f"{self.output_dir}/pfile{self.episodes}.trajectory", "w")
 
         return True
+
+    def _on_rollout_start(self) -> None:
+        if "env" in self.locals:
+            env = self.locals["env"].envs[0]
+        else:
+            env = self.locals["self"].env.envs[0].env.env
+
+        translate = self.translate(env._state)
+        self.file.write(f"((:init {translate}\n")
 
     def _on_rollout_end(self) -> None:
         env = self.locals["env"].envs[0]
@@ -50,3 +93,6 @@ class RecordTrajectories(BaseCallback):
             results = np.array([score, length]).transpose()
             df = pd.DataFrame(results, columns=["score", "length"])
             df.to_csv(f"{self.output_dir}/summary.csv")
+
+    def _on_training_end(self) -> None:
+        os.remove(f"{self.output_dir}/pfile{self.episodes}.trajectory")

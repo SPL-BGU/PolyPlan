@@ -12,16 +12,12 @@ from pathlib import Path
 
 sys.path.append("planning")
 sys.path.append(CONFIG.NSAM_PATH)
-from enhsp import ENHSP
-from observations.experiments_trajectories_creator import (
-    ExperimentTrajectoriesCreator,
-    SolverType,
-)
-from pddl_plus_parser.lisp_parsers import DomainParser, ProblemParser, TrajectoryParser
-from sam_learning.learners.numeric_sam import NumericSAMLearner
+from metric_ff import MetricFF as solver
+from pddl_plus_parser.lisp_parsers import DomainParser, TrajectoryParser
+from sam_learning.numeric_sam import NumericSAMLearner
 import logging
 
-os.environ["CONVEX_HULL_ERROR_PATH"] = "tests/temp_files/ch_error.txt"
+os.environ["CONVEX_HULL_ERROR_PATH"] = "temp_files/ch_error.txt"
 logging.root.setLevel(logging.ERROR)
 
 
@@ -78,7 +74,7 @@ class ExploringSam(PolycraftAgent):
 
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
-        self.enhsp = ENHSP()
+        self.solver = solver()
         self.eval = False
 
         self.output_dir = output_dir
@@ -93,7 +89,7 @@ class ExploringSam(PolycraftAgent):
     # overriding abstract method
     def choose_action(self, state=None) -> int:
         """Use explorer to sample action"""
-        # TODO: add if in eval mode use ENHSP
+        # TODO: add if in eval mode use solver
         return self.explorer.choose_action(state)
 
     def learn(self, total_timesteps: int, callback: MaybeCallback = None):
@@ -108,67 +104,55 @@ class ExploringSam(PolycraftAgent):
 
         if callback is None:
             callback = [logger_callback, explore_callback]
-        elif isinstance(callback, CallbackList):
-            callback = callback.callbacks
-        if isinstance(callback, list):
-            for cb in callback:
-                if isinstance(cb, Logger.RecordTrajectories):
-                    callback.remove(cb)  # remove duplicate callback
-            callback.append(logger_callback)
-            callback.append(explore_callback)
+        else:
+            if isinstance(callback, CallbackList):
+                callback = callback.callbacks
+            if isinstance(callback, list):
+                for cb in callback:
+                    if isinstance(cb, Logger.RecordTrajectories):
+                        callback.remove(cb)  # remove duplicate callback
+                callback.append(logger_callback)
+                callback.append(explore_callback)
 
         super().learn(
             total_timesteps=total_timesteps,
             callback=callback,
         )
 
-    def active_nsam(self):
+    def active_nsam(self) -> list:
         """Active N-SAM to learn the action model and return the plan"""
 
         SOLUTIONS_PATH = Path(self.output_dir)
 
-        # create pddl trajectories
-        trajectory_creator = ExperimentTrajectoriesCreator(
-            domain_file_name="domain.pddl", working_directory_path=SOLUTIONS_PATH
-        )
-        selected_solver = SolverType.enhsp
-        trajectory_creator.fix_solution_files(selected_solver)
-        trajectory_creator.create_domain_trajectories(
-            problem_path=SOLUTIONS_PATH / "problem.pddl"
-        )
-
         # run nsam
-        depot_partial_domain = DomainParser(
+        domain = DomainParser(
             SOLUTIONS_PATH / "domain.pddl", partial_parsing=True
         ).parse_domain()
-        depot_problem = ProblemParser(
-            SOLUTIONS_PATH / "problem.pddl", domain=depot_partial_domain
-        ).parse_problem()
         with open(SOLUTIONS_PATH / "fluents_map.json", "rt") as json_file:
-            depot_fluents_map = json.load(json_file)
+            fluents_map = json.load(json_file)
 
         observation_list = []
 
-        i = 0
+        i = 1
         while (
             os.path.exists(trajectory := SOLUTIONS_PATH / f"pfile{i}.trajectory")
             and os.path.getsize(trajectory) > 0
         ):
-            depot_observation = TrajectoryParser(
-                depot_partial_domain, depot_problem
-            ).parse_trajectory(SOLUTIONS_PATH / f"pfile{i}.trajectory")
-            observation_list.append(depot_observation)
+            observation = TrajectoryParser(domain).parse_trajectory(
+                SOLUTIONS_PATH / f"pfile{i}.trajectory"
+            )
+            observation_list.append(observation)
             i += 1
 
-        numeric_sam = NumericSAMLearner(depot_partial_domain, depot_fluents_map)
+        numeric_sam = NumericSAMLearner(domain, fluents_map)
         learned_model, _ = numeric_sam.learn_action_model(observation_list)
-        domain = learned_model.to_pddl()
-        domain_location = SOLUTIONS_PATH / f"domain{i}.pddl"
+        learned_domain = learned_model.to_pddl()
+        domain_location = SOLUTIONS_PATH / f"domain{i-1}.pddl"
         with open(domain_location, "w") as f:
-            f.write(domain)
+            f.write(learned_domain)
 
-        # run enhsp
-        plan = self.enhsp.create_plan(
+        # run solver
+        plan = self.solver.create_plan(
             domain=f"{os.getcwd()}/{str(domain_location)}",
             problem=f"{os.getcwd()}/{str(SOLUTIONS_PATH / 'problem.pddl')}",
         )

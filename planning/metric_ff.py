@@ -27,6 +27,7 @@ class MetricFF:
         if not os.path.exists(problem):
             raise Exception("Problem file not found")
 
+        original_dir = os.getcwd()
         os.chdir(self.path)
         cmd = f"./ff -o {domain} -f {problem} -s 0"
 
@@ -43,6 +44,8 @@ class MetricFF:
             print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
             return []
+
+        os.chdir(original_dir)
 
         exception_flag = False
         for line in planner.stderr:
