@@ -6,3 +6,4 @@ from agents.smart_agent import SmartAgent
 from agents.qlearning_agent import QLearningAgent
 from agents.exploring_sam import ExploringSam
 from agents.explore_only_legal import ExploreOnlyLegal
+from agents.best_first_search import BFS
