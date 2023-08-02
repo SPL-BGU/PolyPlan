@@ -81,14 +81,22 @@ class AdvancedMinecraft(PolycraftGymEnv):
         self.state = flatten(self._observation_space, self._state)
 
         self.last_pos = {
-            "position": np.array(
-                [0],
-                dtype=np.uint8,
+            "position": np.zeros(
+                (1,),
+                dtype=np.int16,
             )
         }
 
         self.max_rounds = 128
         self.decoder.agent_state = self.last_pos
+
+    def move_to_start(self) -> None:
+        sense_all = self._senses()
+        pos_x = sense_all["player"]["pos"][0]
+        pos_z = sense_all["player"]["pos"][2]
+        position = (pos_x - 1) + ((pos_z - 1) * 30)
+        self._state["position"][0] = position
+        self.last_pos["position"][0] = position
 
     def step(self, action: int) -> tuple:
         self.last_pos["position"][0] = self._state["position"][0]
@@ -134,12 +142,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
             location = int(location)
             inventory[self.decoder.decode_item_type(item["item"])] = item["count"]
         self._state["inventory"] = inventory
-
-        # location in map
-        pos_x = sense_all["player"]["pos"][0]
-        pos_z = sense_all["player"]["pos"][2]
-        position = (pos_x - 1) + ((pos_z - 1) * 30)
-        self._state["position"][0] = position
 
         inventory_after = self._state["inventory"].copy()
 

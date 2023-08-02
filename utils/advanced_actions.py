@@ -11,6 +11,18 @@ class TP(MacroAction):
         self._actions = TP.class_actions
         self._encoder = TP.class_encoder
 
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        to_pos = action
+        x_pos = to_pos % 30 + 1
+        z_pos = to_pos // 30 + 1
+
+        state["position"] = [to_pos]
+
+        return [f"TP_TO {x_pos},4,{z_pos}"]
+
 
 class Break(MacroAction):
     class_actions = {0: ["BREAK_BLOCK"]}

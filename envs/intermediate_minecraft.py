@@ -82,8 +82,8 @@ class IntermediateMinecraft(PolycraftGymEnv):
         self.state = flatten(self._observation_space, self._state)
 
         self.last_pos = {
-            "position": np.array(
-                [0],
+            "position": np.zeros(
+                (1,),
                 dtype=np.uint8,
             )
         }
@@ -93,10 +93,7 @@ class IntermediateMinecraft(PolycraftGymEnv):
 
     def move_to_start(self) -> None:
         self.step(0)
-        self._state["gameMap"] = np.array(
-            [2, 1, 1, 1, 1, 1],
-            dtype=np.uint8,
-        )
+        self._state["gameMap"][:] = [2, 1, 1, 1, 1, 1]
 
     def step(self, action: int) -> tuple:
         self.last_pos["position"][0] = self._state["position"][0]

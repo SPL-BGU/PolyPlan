@@ -28,7 +28,7 @@ class BasicMinecraft(PolycraftGymEnv):
             {
                 "treeCount": Box(
                     low=0,
-                    high=5,
+                    high=64,
                     shape=(1,),
                     dtype=np.uint8,
                 ),  # count of trees in the map

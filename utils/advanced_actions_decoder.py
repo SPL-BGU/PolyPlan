@@ -62,11 +62,9 @@ class AdvancedActionsDecoder(ActionsDecoder):
             raise ValueError(f"decode not found action '{action}'")
 
         if action < 900:  # if teleport
-            pos = action
-            x_pos = pos % 30 + 1
-            z_pos = pos // 30 + 1
-
-            return [f"TP_TO {x_pos},4,{z_pos}"]
+            return self.advanced_actions[0].meet_requirements(
+                action, state, self.items_decoder
+            )
 
         for index, size in self.actions_size.items():
             if action < size:
