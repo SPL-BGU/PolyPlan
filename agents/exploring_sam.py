@@ -10,9 +10,12 @@ import json
 import shutil
 from pathlib import Path
 
+from agents import FixedScriptAgent
+
 sys.path.append("planning")
 sys.path.append(CONFIG.NSAM_PATH)
-from metric_ff import MetricFF as solver
+from enhsp import ENHSP
+from metric_ff import MetricFF
 from pddl_plus_parser.lisp_parsers import DomainParser, TrajectoryParser
 from sam_learning.numeric_sam import NumericSAMLearner
 import logging
@@ -71,10 +74,11 @@ class ExploringSam(PolycraftAgent):
     ):
         super().__init__(env)
         self.explorer = explorer
+        self.saved_explorer = None
 
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
-        self.solver = solver()
+        self.solvers = [ENHSP(), MetricFF()]
         self.eval = False
 
         self.output_dir = output_dir
@@ -86,10 +90,25 @@ class ExploringSam(PolycraftAgent):
         self.save_path = save_path
         self.save_interval = save_interval
 
+    def eval(self, toggle: bool = True) -> None:
+        if toggle == self.eval:
+            return
+
+        if toggle:
+            self.saved_explorer = self.explorer
+            self.explorer = FixedScriptAgent(
+                self.env,
+                script=self.active_nsam(),
+            )
+        else:
+            self.explorer = self.saved_explorer
+            self.saved_explorer = None
+
+        self.eval = toggle
+
     # overriding abstract method
     def choose_action(self, state=None) -> int:
         """Use explorer to sample action"""
-        # TODO: add if in eval mode use solver
         return self.explorer.choose_action(state)
 
     def learn(self, total_timesteps: int, callback: MaybeCallback = None):
@@ -151,11 +170,14 @@ class ExploringSam(PolycraftAgent):
         with open(domain_location, "w") as f:
             f.write(learned_domain)
 
-        # run solver
-        plan = self.solver.create_plan(
-            domain=f"{os.getcwd()}/{str(domain_location)}",
-            problem=f"{os.getcwd()}/{str(SOLUTIONS_PATH / 'problem.pddl')}",
-        )
+        # run solvers
+        for solver in self.solvers:
+            plan = solver.create_plan(
+                domain=f"{os.getcwd()}/{str(domain_location)}",
+                problem=f"{os.getcwd()}/{str(SOLUTIONS_PATH / 'problem.pddl')}",
+            )
+            if len(plan) > 0:
+                break
 
         return plan
 

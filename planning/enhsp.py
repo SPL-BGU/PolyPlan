@@ -22,11 +22,14 @@ class ENHSP:
         if java_version < 15:
             raise Exception("Please use JAVA 15 or higher")
 
-    def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
+    def create_plan(
+        self, domain: str, problem: str, planner: str = "sat-hmrphj", timeout: int = 60
+    ) -> list:
         """
         Create a plan for the given domain and problem
         :param domain: the domain file - must be located in the planning folder
         :param problem: the problem file - must be located in the planning folder
+        :param planner: the planner to use - default is sat-hmrphj, optimal is opt-hrmax
         :param timeout: the timeout for the planner in seconds
         """
 
@@ -36,7 +39,7 @@ class ENHSP:
         if not os.path.exists(problem):
             raise Exception("Problem file not found")
 
-        cmd = f"java -jar {self.path}/enhsp.jar -o {domain} -f {problem} -planner opt-hrmax"
+        cmd = f"java -jar {self.path}/enhsp.jar -o {domain} -f {problem} -planner {planner}"
 
         planner = subprocess.Popen(
             "exec " + cmd,
