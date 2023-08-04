@@ -36,7 +36,7 @@ and then try again.
 
 4. You can use two planners: 
 * ENHSP - Make sure java 15 or higher is installed:
-> [Download link for ENHSP](https://sites.google.com/view/enhsp/home) <br />
+> [Download link for ENHSP](https://gitlab.com/enricos83/ENHSP-Public/-/tags/enhsp20-0.9.9) <br />
 * Metric-FF:
 > [Download link for Metric-FF](https://fai.cs.uni-saarland.de/hoffmann/metric-ff.html)
 
