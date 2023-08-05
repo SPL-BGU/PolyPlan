@@ -128,7 +128,7 @@ def train_rl_agent(
             learning_starts=2048,
             exploration_fraction=1,
             train_freq=(1, "episode"),
-            target_update_interval=2048,
+            target_update_interval=epoch,
             batch_size=batch_size,
             tensorboard_log=logdir,
         )
@@ -233,6 +233,8 @@ def train_with_qlearning(
     if learning_method not in ["offline", "online"]:
         raise ValueError("learning method must be offline or online")
 
+    env = RecordEpisodeStatistics(env, deque_size=5000)
+
     # make log directory
     logdir = f"logs/qlearning_{learning_method}"
     dir_index = 1
@@ -279,14 +281,14 @@ def train_with_qlearning(
             final_epsilon=0,
         )
 
-        if type(env) is BasicMinecraft:
+        if type(env.env) is BasicMinecraft:
             filename = "agents/scripts/macro_actions_script.txt"
-        elif type(env) is IntermediateMinecraft:
+        elif type(env.env) is IntermediateMinecraft:
             filename = "agents/scripts/intermediate_actions_script.txt"
         else:  # AdvancedMinecraft
             filename = "agents/scripts/advanced_actions_script.txt"
 
-        expert = FixedScriptAgent(env, filename=filename)
+        expert = FixedScriptAgent(env.env, filename=filename, human_readable=True)
 
         agent.learn(timesteps, callback, expert)
 

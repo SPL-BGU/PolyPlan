@@ -19,6 +19,7 @@ class RecordTrajectories(BaseCallback):
         self.episodes = 1
         self.output_dir = output_dir
         self.file = open(f"{output_dir}/pfile1.trajectory", "w")
+        self.env = None
 
     def translate(self, state):
         output = ""
@@ -48,16 +49,25 @@ class RecordTrajectories(BaseCallback):
 
         return output
 
+    def get_env(self):
+        """Get the current environment"""
+        if self.env is None:
+            if "env" in self.locals:
+                env = self.locals["env"].envs[0]
+            else:
+                env = self.locals["self"].env.envs[0].env.env
+            while issubclass(type(env), Wrapper):
+                env = env.env
+            self.env = env
+        return self.env
+
     def _on_step(self) -> bool:
         """
         This method will be called by the model after each call to `env.step()`.
 
         :return: (bool) If the callback returns False, training is aborted early.
         """
-        env = self.locals["env"].envs[0]
-
-        while issubclass(type(env), Wrapper):
-            env = env.env
+        env = self.get_env()
 
         action = self.locals["actions"][0]
         action = env.decoder.decode_to_planning(action)
@@ -74,10 +84,7 @@ class RecordTrajectories(BaseCallback):
         return True
 
     def _on_rollout_start(self) -> None:
-        if "env" in self.locals:
-            env = self.locals["env"].envs[0]
-        else:
-            env = self.locals["self"].env.envs[0].env.env
+        env = self.get_env()
 
         translate = self.translate(env._state)
         self.file.write(f"((:init {translate}\n")

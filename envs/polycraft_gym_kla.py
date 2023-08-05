@@ -22,7 +22,7 @@ class PolycraftGymKLA(gym.Wrapper):
         self.env.max_rounds = expert_actions
         self.env.rounds_left = expert_actions
 
-        self.expert = FixedScriptAgent(self, "my_script.txt")
+        self.expert = FixedScriptAgent(self, "my_script.txt", human_readable=True)
         self.k = expert_actions - k
 
     def reset(self):
