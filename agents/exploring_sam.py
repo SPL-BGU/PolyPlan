@@ -79,7 +79,7 @@ class ExploringSam(PolycraftAgent):
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
         self.solvers = [ENHSP(), MetricFF()]
-        self.eval = False
+        self.eval_mode = False
 
         self.output_dir = output_dir
         shutil.copyfile(domain, f"{output_dir}/domain.pddl")
@@ -91,7 +91,7 @@ class ExploringSam(PolycraftAgent):
         self.save_interval = save_interval
 
     def eval(self, toggle: bool = True) -> None:
-        if toggle == self.eval:
+        if toggle == self.eval_mode:
             return
 
         if toggle:
@@ -104,7 +104,7 @@ class ExploringSam(PolycraftAgent):
             self.explorer = self.saved_explorer
             self.saved_explorer = None
 
-        self.eval = toggle
+        self.eval_mode = toggle
 
     # overriding abstract method
     def choose_action(self, state=None) -> int:

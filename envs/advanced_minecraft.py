@@ -3,6 +3,7 @@ from gym.spaces import Box, Discrete
 from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
+from math import sqrt
 from collections import OrderedDict
 from utils import AdvancedActionsDecoder
 from typing import Union, List
@@ -20,9 +21,13 @@ class AdvancedMinecraft(PolycraftGymEnv):
         rounds: actions in the environment until reset
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, map_size=30, **kwargs):
+        map_size_square = map_size**2
+
         # PolycraftGymEnv
-        super().__init__(**kwargs, decoder=AdvancedActionsDecoder())
+        super().__init__(**kwargs, decoder=AdvancedActionsDecoder(map_size_square))
+
+        self.map_size = map_size
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(
@@ -36,9 +41,9 @@ class AdvancedMinecraft(PolycraftGymEnv):
                 "gameMap": Box(
                     low=0,
                     high=self.decoder.get_blocks_size(),
-                    shape=(30 * 30,),
+                    shape=(map_size_square,),
                     dtype=np.uint8,
-                ),  # map (30*30)
+                ),
                 "inventory": Box(
                     low=0,
                     high=64,  # 64 is the max stack size
@@ -47,15 +52,17 @@ class AdvancedMinecraft(PolycraftGymEnv):
                 ),  # count of each item in the inventory
                 "position": Box(
                     low=0,
-                    high=900,
+                    high=map_size_square,
                     shape=(1,),
                     dtype=np.int16,
-                ),  # point in map size (30*30)
+                ),
             }
         )
         self.observation_space = flatten_space(self._observation_space)
 
-        self.action_space = Discrete(self.decoder.get_actions_size())  # 6 + 900
+        self.action_space = Discrete(
+            self.decoder.get_actions_size()
+        )  # 6 + actual map size
 
         # current state start with all zeros
         self._state = OrderedDict(
@@ -65,7 +72,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
                     dtype=np.uint8,
                 ),
                 "gameMap": np.zeros(
-                    (30 * 30,),
+                    (map_size_square,),
                     dtype=np.uint8,
                 ),
                 "inventory": np.zeros(
@@ -94,7 +101,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
         sense_all = self._senses()
         pos_x = sense_all["player"]["pos"][0]
         pos_z = sense_all["player"]["pos"][2]
-        position = (pos_x - 1) + ((pos_z - 1) * 30)
+        position = (pos_x - 1) + ((pos_z - 1) * self.map_size)
         self._state["position"][0] = position
         self.last_pos["position"][0] = position
 
@@ -117,18 +124,14 @@ class AdvancedMinecraft(PolycraftGymEnv):
 
         # update the gameMap
         gameMap = np.zeros(
-            (30, 30, 1),
+            (self.map_size, self.map_size, 1),
             dtype=np.uint8,
         )
-        for location, game_block in sense_all["map"].items():
-            location = [int(i) for i in location.split(",")]
-            pos_x = location[0]
-            pos_z = location[2]
-            if pos_x == 0 or pos_x == 31 or pos_z == 0 or pos_z == 31:
-                continue
-            gameMap[pos_x - 1][pos_z - 1][0] = self.decoder.decode_block_type(
-                game_block["name"]
-            )
+        for pos_x in range(1, self.map_size + 1):
+            for pos_z in range(1, self.map_size + 1):
+                gameMap[pos_x - 1][pos_z - 1][0] = self.decoder.decode_block_type(
+                    sense_all["map"][f"{pos_x},{4},{pos_z}"]["name"]
+                )
         self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
 
         # update the inventory

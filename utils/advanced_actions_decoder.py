@@ -1,10 +1,11 @@
 from utils import ActionsDecoder
 from utils.advanced_actions import *
 from typing import Dict, List
+from math import sqrt
 
 
 class AdvancedActionsDecoder(ActionsDecoder):
-    def __init__(self):
+    def __init__(self, map_size: int):
         super().__init__()
         self.advanced_actions: Dict[int, MacroAction]
         self.actions_encoder: Dict[int, Dict[str, int]]
@@ -29,7 +30,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
         self.items_size = len(self.items_decoder)
 
         self.advanced_actions = {
-            0: TP(),
+            0: TP(int(sqrt(map_size))),
             1: Break(),
             2: Craft(),
             3: PlaceTreeTap(),
@@ -43,17 +44,30 @@ class AdvancedActionsDecoder(ActionsDecoder):
         }
 
         self.actions_size = {
-            0: self.advanced_actions[0].length,  # 900 - index 0-899 (TP_TO)
-            1: self.advanced_actions[1].length,  # 1 - index 900 (BREAK)
-            2: self.advanced_actions[2].length,  # 4 - index 901-904 (CRAFT)
-            3: self.advanced_actions[3].length,  # 1 - index 905 (PLACE TREE TAP)
+            0: self.advanced_actions[
+                0
+            ].length,  # map_size - index 0-(map_size-1) (TP_TO)
+            1: self.advanced_actions[1].length,  # 1 - index map_size (BREAK)
+            2: self.advanced_actions[
+                2
+            ].length,  # 4 - index (map_size+1)-(map_size+4) (CRAFT)
+            3: self.advanced_actions[3].length,  # 1 - index map_size+5 (PLACE TREE TAP)
         }
 
         self.agent_state = None
+        self.map_size = map_size
+        self.crafting_table_cell = 589
 
     # overriding super method
     def update_tp(self, sense_all: Dict) -> None:
         TP_Update.update_actions(sense_all, self.advanced_actions[2])
+        crafting_table_cell = (
+            self.advanced_actions[2].actions[2][0].split(" ")[1].split(",")
+        )
+        map_size = int(sqrt(self.map_size))
+        self.crafting_table_cell = (int(crafting_table_cell[0]) - 1) + (
+            (int(crafting_table_cell[2]) - 1) * map_size
+        )
 
     # overriding abstract method
     def decode_action_type(self, action: int, state: Dict) -> List[str]:
@@ -61,7 +75,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
         if action >= self.get_actions_size():
             raise ValueError(f"decode not found action '{action}'")
 
-        if action < 900:  # if teleport
+        if action < self.map_size:  # if teleport
             return self.advanced_actions[0].meet_requirements(
                 action, state, self.items_decoder
             )
@@ -79,8 +93,12 @@ class AdvancedActionsDecoder(ActionsDecoder):
     def encode_human_action_type(self, action: str) -> int:
         """Encode the human readable action to gym action"""
         if action.startswith("TP_TO"):
-            action = action.split(" ")[1].split(",")
-            position = (int(action[0]) - 1) + ((int(action[1]) - 1) * 30)
+            if "crafting_table" in action:
+                position = self.crafting_table_cell
+            else:
+                action = action.split(" ")[1].split(",")
+                map_size = int(sqrt(self.map_size))
+                position = (int(action[0]) - 1) + ((int(action[1]) - 1) * map_size)
             return position
 
         for i, dic in self.actions_encoder.items():
@@ -95,7 +113,11 @@ class AdvancedActionsDecoder(ActionsDecoder):
         action = action[1:-1].split(" ")
         action = action[0].upper() + " " + " ".join(action[1:])
         if action.startswith("TP_TO"):
-            position = int(action.split(" ")[2].replace("cell", ""))
+            position = action.split(" ")[2]
+            if position == "crafting_table":
+                position = self.crafting_table_cell
+            else:
+                position = int(action.replace("cell", ""))
             return position
 
         for i, dic in self.actions_encoder.items():
@@ -109,13 +131,21 @@ class AdvancedActionsDecoder(ActionsDecoder):
     def decode_to_planning(self, action: int) -> str:
         """Decode the gym action to planning action"""
         location = self.agent_state["position"][0]
-        if action < 900:
-            return f"TP_TO cell{location} cell{action}"
+        if action < self.map_size:
+            if location == self.crafting_table_cell:
+                from_location = "crafting_table"
+            else:
+                from_location = f"cell{location}"
+            if action == self.crafting_table_cell:
+                to_location = "crafting_table"
+            else:
+                to_location = f"cell{action}"
+            return f"TP_TO {from_location} {to_location}"
 
         for i, dic in self.actions_encoder.items():
             for act, j in dic.items():
                 if j + sum(list(self.actions_size.values())[:i]) == action:
-                    if action == 901 or action == 902:
+                    if action == (self.map_size + 1) or action == (self.map_size + 2):
                         return act
                     return f"{act} cell{location}"
 

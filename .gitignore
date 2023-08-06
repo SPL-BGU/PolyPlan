@@ -136,3 +136,4 @@ cProfile.txt
 cProfile.prof
 models/
 logs/
+temp_files/ch_error.txt

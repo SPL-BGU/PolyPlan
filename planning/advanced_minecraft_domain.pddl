@@ -9,7 +9,7 @@
     )
 
     (:constants
-        cell806 - cell
+        crafting_table - cell
     )
 
     (:predicates
@@ -84,7 +84,7 @@
         )
         :effect (and
             (not (position ?pos))
-            (position cell806)
+            (position crafting_table)
             (decrease (count_planks_in_inventory) 5)
             (decrease (count_stick_in_inventory) 1)
             (increase (count_tree_tap_in_inventory) 1)
@@ -101,7 +101,7 @@
         )
         :effect (and
             (not (position ?pos))
-            (position cell806)
+            (position crafting_table)
             (decrease (count_planks_in_inventory) 2)
             (decrease (count_stick_in_inventory) 4)
             (decrease

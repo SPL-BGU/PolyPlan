@@ -1,13 +1,16 @@
 from typing import Dict, List
 from utils.macro_actions import MacroAction, Craft
+from math import sqrt
 
 
 class TP(MacroAction):
-    class_actions = {i: ["TP_TO"] for i in range(900)}
+    class_actions = {0: "TP_TO"}
     class_encoder = {"TP_TO": 0}
 
-    def __init__(self):
+    def __init__(self, map_size=30):
         super().__init__()
+        self.map_size = map_size
+        TP.class_actions = {i: ["TP_TO"] for i in range(map_size**2)}
         self._actions = TP.class_actions
         self._encoder = TP.class_encoder
 
@@ -16,8 +19,8 @@ class TP(MacroAction):
     ) -> str:
         """If the action is not available in the this state, return NOP"""
         to_pos = action
-        x_pos = to_pos % 30 + 1
-        z_pos = to_pos // 30 + 1
+        x_pos = (to_pos % self.map_size) + 1
+        z_pos = (to_pos // self.map_size) + 1
 
         state["position"] = [to_pos]
 
