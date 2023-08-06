@@ -907,7 +907,7 @@
 		(= (cell_type cell279) 1)
 		(= (cell_type cell767) 1)
 		(= (cell_type cell442) 1)
-		(= (cell_type cell806) 2)
+		(= (cell_type crafting_table) 2)
 
 		; Items
 		(= (count_log_in_inventory) 0)

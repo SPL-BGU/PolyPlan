@@ -134,6 +134,7 @@ config.py
 expert_trajectory.pkl
 cProfile.txt
 cProfile.prof
+temp_files/ch_error.txt
 models/
 logs/
-temp_files/ch_error.txt
+dataset/
