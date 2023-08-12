@@ -22,17 +22,16 @@ class LearningAgent(PolycraftAgent):
         """Return the action the delegate agent takes."""
         return self._agent.choose_action(state)
 
-    def record_trajectory(self, steps: int = 64) -> None:
+    def record_trajectory(self) -> None:
         """Record the trajectory."""
         if not self.for_planning:  # record trajectory for behavioral cloning
             venv = DummyVecEnv([lambda: RolloutInfoWrapper(self.env)])
-            steps = max(steps, 64)
 
             # create expert policy
             self._rollouts = rollout.rollout(
                 lambda state: [self.choose_action(state)],
                 venv,
-                rollout.make_sample_until(min_timesteps=steps, min_episodes=None),
+                rollout.make_sample_until(min_timesteps=None, min_episodes=1),
             )
         else:  # record trajectory for planning algorithms
             state = self.env.reset()

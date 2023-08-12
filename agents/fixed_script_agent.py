@@ -18,11 +18,13 @@ class FixedScriptAgent(PolycraftAgent):
             self._actions_list = [
                 self.env.decoder.encode_human_action_type(action)
                 for action in self._actions_list
+                if action != ""
             ]
         else:
             self._actions_list = [
                 self.env.decoder.encode_planning_action_type(action)
                 for action in self._actions_list
+                if action != ""
             ]
 
         if len(self._actions_list) == 0:

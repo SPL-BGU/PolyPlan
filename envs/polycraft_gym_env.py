@@ -173,14 +173,13 @@ class PolycraftGymEnv(Env):
 
         # wait until the domain is loaded
         while True:
-            sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
-            if "map" in sense_all:
+            if "map" in (sense_all := self._senses()):
                 if "minecraft:crafting_table" in [
                     tup["name"] for tup in sense_all["map"].values()
                 ]:
                     break
             time.sleep(0.1)
-
+        time.sleep(1)
         # reset the teleport according to the new domain
         self.decoder.update_tp(sense_all)
 

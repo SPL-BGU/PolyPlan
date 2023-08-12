@@ -3,7 +3,6 @@ from utils.single_action import SingleAction
 
 
 class MacroAction(SingleAction):
-
     _actions: Dict[int, List[str]]
 
     @property
@@ -86,7 +85,9 @@ class Craft(MacroAction):
 
 
 class PlaceTreeTap(MacroAction):
-    class_actions = {0: ["NOP", "MOVE D", "PLACE_TREE_TAP", "COLLECT"]}
+    class_actions = {
+        0: ["NOP", "MOVE X", "PLACE_TREE_TAP", "COLLECT", "BREAK_BLOCK", "MOVE W"]
+    }
     class_encoder = {"PLACE_TREE_TAP": 0}
 
     def __init__(self):

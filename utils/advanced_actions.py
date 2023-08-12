@@ -48,7 +48,7 @@ class Break(MacroAction):
 
 class PlaceTreeTap(MacroAction):
     class_actions = {
-        0: ["MOVE D", "PLACE_TREE_TAP", "COLLECT", "BREAK_BLOCK", "MOVE A"]
+        0: ["MOVE X", "PLACE_TREE_TAP", "COLLECT", "BREAK_BLOCK", "MOVE W"]
     }
     class_encoder = {"PLACE_TREE_TAP": 0}
 

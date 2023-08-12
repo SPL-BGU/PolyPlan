@@ -39,6 +39,11 @@ from imitation.util import logger as imit_logger
 from gym.wrappers import RecordEpisodeStatistics
 from utils import Logger
 
+import numpy as np
+
+SEED = 63
+np.random.seed(SEED)  # random seed for reproducibility
+
 
 def train_rl_agent(
     env,
@@ -131,6 +136,7 @@ def train_rl_agent(
             target_update_interval=epoch,
             batch_size=batch_size,
             tensorboard_log=logdir,
+            seed=SEED,
         )
 
         model.learn(
@@ -148,6 +154,7 @@ def train_rl_agent(
                 n_steps=epoch,
                 batch_size=batch_size,
                 tensorboard_log=logdir,
+                seed=SEED,
             )
         else:
             model = PPO(
@@ -157,6 +164,7 @@ def train_rl_agent(
                 n_steps=epoch,
                 batch_size=batch_size,
                 tensorboard_log=logdir,
+                seed=SEED,
             )
 
         if learning_method == "GAIL":
@@ -172,7 +180,7 @@ def train_rl_agent(
             )
             gail_trainer = GAIL(
                 demonstrations=rollouts,
-                demo_batch_size=11,
+                demo_batch_size=1,
                 gen_replay_buffer_capacity=buffer_size,
                 venv=venv,
                 gen_algo=model,
