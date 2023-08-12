@@ -14,12 +14,11 @@
         (= (count_stick_in_inventory) 0)
         (= (count_sack_polyisoprene_pellets_in_inventory) 0)
         (= (count_tree_tap_in_inventory) 0)
-        (= (count_wooden_pogo_stick_in_inventory) 0)
     )
 
     (:goal
         (and
-            (= (count_wooden_pogo_stick_in_inventory) 1)
+            (have_pogo_stick)
         )
     )
 )

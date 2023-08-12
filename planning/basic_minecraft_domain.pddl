@@ -4,6 +4,10 @@
 
     (:requirements :strips :typing :negative-preconditions :fluents)
 
+    (:predicates
+        (have_pogo_stick)
+    )
+
     (:functions
         ; Map
         (trees_in_map)
@@ -14,7 +18,6 @@
         (count_stick_in_inventory)
         (count_sack_polyisoprene_pellets_in_inventory)
         (count_tree_tap_in_inventory)
-        (count_wooden_pogo_stick_in_inventory)
     )
 
     ; Actions
@@ -77,9 +80,7 @@
             (decrease
                 (count_sack_polyisoprene_pellets_in_inventory)
                 1)
-            (increase
-                (count_wooden_pogo_stick_in_inventory)
-                1)
+            (have_pogo_stick)
         )
     )
 
@@ -90,7 +91,6 @@
             (> (count_tree_tap_in_inventory) 0)
         )
         :effect (and
-            (decrease (count_tree_tap_in_inventory) 1)
             (increase
                 (count_sack_polyisoprene_pellets_in_inventory)
                 1)

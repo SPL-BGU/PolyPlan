@@ -2,7 +2,7 @@
 
 (define (domain PolyCraft)
 
-    (:requirements :strips :typing :negative-preconditions :fluents)
+    (:requirements :strips :typing :negative-preconditions :fluents :disjunctive-preconditions)
 
     (:types
         cell - object
@@ -14,19 +14,21 @@
 
     (:predicates
         (position ?c - cell)
+
+        ; Map
+        (tree_cell ?c - cell)
+        (air_cell ?c - cell)
+        (crafting_table_cell ?c - cell)
+        (have_pogo_stick)
     )
 
     (:functions
-        ; Map
-        (cell_type ?c - cell) ; 0 = empty, 1 = tree, 2 = crafting table
-
         ; Items
         (count_log_in_inventory)
         (count_planks_in_inventory)
         (count_stick_in_inventory)
         (count_sack_polyisoprene_pellets_in_inventory)
         (count_tree_tap_in_inventory)
-        (count_wooden_pogo_stick_in_inventory)
     )
 
     ; Actions
@@ -45,10 +47,11 @@
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
-            (= (cell_type ?pos) 1)
+            (tree_cell ?pos)
         )
         :effect (and
-            (assign (cell_type ?pos) 0)
+            (not (tree_cell ?pos))
+            (air_cell ?pos)
             (increase (count_log_in_inventory) 1)
         )
     )
@@ -107,9 +110,7 @@
             (decrease
                 (count_sack_polyisoprene_pellets_in_inventory)
                 1)
-            (increase
-                (count_wooden_pogo_stick_in_inventory)
-                1)
+            (have_pogo_stick)
         )
     )
 
@@ -117,7 +118,7 @@
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
-            (= (cell_type ?pos) 1)
+            (tree_cell ?pos)
             (> (count_tree_tap_in_inventory) 0)
         )
         :effect (and
