@@ -49,9 +49,11 @@ class PolycraftGymEnv(Env):
         self.server_controller.open_connection()
 
         if start_pal:
+            self.server_controller.set_timeout(60.0)
             self.server_controller.send_command(
                 "START"
             )  # time to reset the environment is 10 seconds
+            self.server_controller.set_timeout()
 
         self._domain_path = CONFIG.DEFUALT_DOMAIN_PATH
 

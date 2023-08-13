@@ -12,11 +12,16 @@ class ServerController:
         self.host = "127.0.0.1"
         self.port = 9000
 
+    def set_timeout(self, timeout: float = 1.0) -> None:
+        """Set the timeout for the socket connection."""
+        self.sock.settimeout(timeout)
+
     def open_connection(self, host: str = "127.0.0.1", port: int = 9000) -> None:
         """Open the connection to the Polycraft server."""
         self.host = host
         self.port = port
         self.sock.connect((host, port))
+        self.set_timeout()
 
     def send_command(self, command: str) -> Dict:
         """Send a command to the Polycraft server and return the response."""
@@ -31,10 +36,13 @@ class ServerController:
         BUFF_SIZE = 4096  # 4 KiB
         data = b""
         while True:  # read the response
-            part = self.sock.recv(BUFF_SIZE)
-            data += part
-            if len(part) < BUFF_SIZE:
-                # either 0 or end of data
+            try:
+                part = self.sock.recv(BUFF_SIZE)
+                data += part
+                if len(part) < BUFF_SIZE:
+                    # either 0 or end of data
+                    break
+            except socket.timeout:
                 break
         if not data:  # RESET command returns no data
             data_dict = {}
