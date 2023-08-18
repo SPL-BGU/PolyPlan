@@ -26,7 +26,12 @@ class RecordTrajectories(BaseCallback):
         for key, value in state.items():
             if key == "gameMap":
                 for i, cell_value in enumerate(value):
-                    output += "(= (cell_type cell{}) {}) ".format(i, int(cell_value))
+                    if cell_value == 0:
+                        output += "(air_cell cell{}) ".format(i)
+                    elif cell_value == 1:
+                        output += "(tree_cell cell{}) ".format(i)
+                    elif cell_value == 2:
+                        output += "(crafting_table_cell crafting_table) "
             elif key == "inventory":
                 output += "(= (count_log_in_inventory ) {}) ".format(int(value[0]))
                 output += "(= (count_planks_in_inventory ) {}) ".format(int(value[1]))
@@ -37,9 +42,8 @@ class RecordTrajectories(BaseCallback):
                     )
                 )
                 output += "(= (count_tree_tap_in_inventory ) {}) ".format(int(value[4]))
-                output += "(= (count_wooden_pogo_stick_in_inventory ) {}) ".format(
-                    int(value[5])
-                )
+                if int(value[5]) > 0:
+                    output += "(have_pogo_stick) "
             elif key == "position":
                 output += "(position cell{})".format(int(value[0]))
             elif key == "treeCount":
@@ -55,7 +59,7 @@ class RecordTrajectories(BaseCallback):
             if "env" in self.locals:
                 env = self.locals["env"].envs[0]
             else:
-                env = self.locals["self"].env.envs[0].env.env
+                env = self.locals["self"].env.envs[0]
             while issubclass(type(env), Wrapper):
                 env = env.env
             self.env = env

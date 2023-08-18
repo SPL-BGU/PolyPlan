@@ -26,7 +26,7 @@ class ENHSP:
         self,
         domain: str,
         problem: str,
-        planner: str = "sat-hmrphj",
+        planner: str = "opt-hrmax",
         tolerance: int = 0.01,
         timeout: int = 60,
     ) -> list:
@@ -34,7 +34,7 @@ class ENHSP:
         Create a plan for the given domain and problem
         :param domain: the domain file - must be located in the planning folder
         :param problem: the problem file - must be located in the planning folder
-        :param planner: the planner to use - default is sat-hmrphj, optimal is opt-hrmax
+        :param planner: the planner to use - default is opt-hrmax, sat option is sat-hmrphj
         :param tolerance: the tolerance for the planner - default is 0.01
         :param timeout: the timeout for the planner in seconds
         """

@@ -117,7 +117,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
             if position == "crafting_table":
                 position = self.crafting_table_cell
             else:
-                position = int(action.replace("cell", ""))
+                position = int(position.replace("cell", ""))
             return position
 
         for i, dic in self.actions_encoder.items():

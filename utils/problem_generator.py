@@ -103,7 +103,7 @@ class ProblemGenerator:
         }
         return template.substitute(template_mapping)
 
-    def generate_problems(
+    def generate_maps(
         self, map_json: Dict, map_size: int, max_num_trees: int, items_range: List[int]
     ) -> Tuple[List, List, List, List, Dict]:
         """
@@ -224,15 +224,25 @@ class ProblemGenerator:
             items_count,
         )
 
-    def generate_basic_problems(self, num_maps_to_generate: int) -> None:
+    def generate_problems(
+        self,
+        num_maps_to_generate: int = 30,
+        map_size: int = 30,
+        basic_only: bool = False,
+    ) -> None:
         """
-        Generate basic maps using the example map.
+        Generate problems using the example map.
         :param num_maps_to_generate: number of maps to generate
         """
 
-        map_size = 30
         generated_maps = {}
-        output_directory_path = self.output_directory_path / "basic"
+
+        if basic_only:
+            output_directory_path = self.output_directory_path / "basic"
+        else:
+            output_directory_path = (
+                self.output_directory_path / f"{map_size}X{map_size}"
+            )
         if not os.path.exists(output_directory_path):
             os.makedirs(output_directory_path)
         else:
@@ -250,20 +260,32 @@ class ProblemGenerator:
                 items_range = [8, 8, 0, 0, 0]
             else:
                 items_range = [0, 0, 0, 0, 0]
+
             with open(self.example_map_path, "r") as map_file:
                 map_json = json.load(map_file)
             (
                 tree_locations_in_map,
-                _,
-                _,
+                crafting_table_location_in_map,
+                agent_starting_location,
                 initial_inventory,
                 items_count,
-            ) = self.generate_problems(map_json, map_size, 300, items_range)
+            ) = self.generate_maps(map_json, map_size, 300, items_range)
 
             tree_count = len(tree_locations_in_map)
+            if tree_count < 3:
+                i -= 1
+                continue
 
             # check if duplicte
-            generated_map = str([tree_count] + initial_inventory)
+            if basic_only:
+                generated_map = str([tree_count] + initial_inventory)
+            else:
+                generated_map = str(
+                    tree_locations_in_map
+                    + crafting_table_location_in_map
+                    + agent_starting_location
+                    + initial_inventory
+                )
             if generated_map in generated_maps:
                 i -= 1
                 continue
@@ -297,89 +319,33 @@ class ProblemGenerator:
                     )
                 )
 
-    def generate_advanced_problems(
-        self, num_maps_to_generate: int, map_size: int
-    ) -> None:
-        """
-        Generate "map_size**2" maps using the example map.
-        :param num_maps_to_generate: number of maps to generate
-        """
-
-        generated_maps = {}
-        output_directory_path = self.output_directory_path / f"{map_size}X{map_size}"
-        if not os.path.exists(output_directory_path):
-            os.makedirs(output_directory_path)
-        else:
-            raise Exception(f"Directory {output_directory_path} already exists")
-
-        i = -1
-        while (i := i + 1) < num_maps_to_generate:
-            if i < int(num_maps_to_generate / 4):
-                items_range = [64, 64, 64, 1, 1]
-            if i < int(num_maps_to_generate / 2):
-                items_range = [32, 32, 32, 1, 0]
-            if i < int(num_maps_to_generate * 3 / 4):
-                items_range = [16, 16, 16, 0, 0]
-            else:
-                items_range = [0, 0, 0, 0, 0]
-
-            with open(self.example_map_path, "r") as map_file:
-                map_json = json.load(map_file)
-
-            (
-                tree_locations_in_map,
-                crafting_table_location_in_map,
-                agent_starting_location,
-                initial_inventory,
-                items_count,
-            ) = self.generate_problems(map_json, map_size, 300, items_range)
-
-            # check if duplicte
-            generated_map = str(
-                tree_locations_in_map
-                + crafting_table_location_in_map
-                + agent_starting_location
-                + initial_inventory
-            )
-            if generated_map in generated_maps:
-                i -= 1
-                continue
-            generated_maps[generated_map] = True
-
-            # save map
-            output_map_file_path = output_directory_path / f"map_instance_{i}.json"
-            with open(output_map_file_path, "wt") as output:
-                json.dump(map_json, output)
-
-            shutil.copy(
-                self.compiled_json_file,
-                output_directory_path / f"map_instance_{i}.json2",
-            )
-
             # generate advanced minecraft pddl
-            transform_to_cell = lambda x: (x[0] - 1) + ((x[2] - 1) * map_size)
-            tree_positions = []
-            for tree_location in tree_locations_in_map:
-                tree_positions.append(transform_to_cell(tree_location))
-            crafting_table_cell = transform_to_cell(crafting_table_location_in_map)
-            agent_position = transform_to_cell(agent_starting_location)
+            if not basic_only:
+                transform_to_cell = lambda x: (x[0] - 1) + ((x[2] - 1) * map_size)
+                tree_positions = []
+                for tree_location in tree_locations_in_map:
+                    tree_positions.append(transform_to_cell(tree_location))
+                crafting_table_cell = transform_to_cell(crafting_table_location_in_map)
+                agent_position = transform_to_cell(agent_starting_location)
 
-            with open(
-                output_directory_path / f"advanced_map_instance_{i}.pddl", "wt"
-            ) as problem_file:
-                problem_file.write(
-                    self.advanced_pddl_minecraft_generate(
-                        instance_name=f"instance_{i}",
-                        map_size=map_size**2,
-                        crafting_table_cell=crafting_table_cell,
-                        agent_position=agent_position,
-                        tree_positions=tree_positions,
-                        count_log_in_inventory=items_count["minecraft:log"],
-                        count_planks_in_inventory=items_count["minecraft:planks"],
-                        count_stick_in_inventory=items_count["minecraft:stick"],
-                        count_sack_polyisoprene_pellets_in_inventory=items_count[
-                            "polycraft:sack_polyisoprene_pellets"
-                        ],
-                        count_tree_tap_in_inventory=items_count["polycraft:tree_tap"],
+                with open(
+                    output_directory_path / f"advanced_map_instance_{i}.pddl", "wt"
+                ) as problem_file:
+                    problem_file.write(
+                        self.advanced_pddl_minecraft_generate(
+                            instance_name=f"instance_{i}",
+                            map_size=map_size**2,
+                            crafting_table_cell=crafting_table_cell,
+                            agent_position=agent_position,
+                            tree_positions=tree_positions,
+                            count_log_in_inventory=items_count["minecraft:log"],
+                            count_planks_in_inventory=items_count["minecraft:planks"],
+                            count_stick_in_inventory=items_count["minecraft:stick"],
+                            count_sack_polyisoprene_pellets_in_inventory=items_count[
+                                "polycraft:sack_polyisoprene_pellets"
+                            ],
+                            count_tree_tap_in_inventory=items_count[
+                                "polycraft:tree_tap"
+                            ],
+                        )
                     )
-                )
