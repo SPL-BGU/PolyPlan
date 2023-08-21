@@ -17,6 +17,10 @@ sys.path.append(CONFIG.NSAM_PATH)
 from enhsp import ENHSP
 from metric_ff import MetricFF
 from pddl_plus_parser.lisp_parsers import DomainParser, TrajectoryParser
+from observations.experiments_trajectories_creator import (
+    ExperimentTrajectoriesCreator,
+    SolverType,
+)
 from sam_learning.numeric_sam import NumericSAMLearner
 import logging
 
@@ -78,7 +82,7 @@ class ExploringSam(PolycraftAgent):
 
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
-        self.solvers = [ENHSP(), MetricFF()]
+        self.solvers = [MetricFF()]
         self.eval_mode = False
 
         self.output_dir = output_dir
@@ -138,35 +142,46 @@ class ExploringSam(PolycraftAgent):
             callback=callback,
         )
 
-    def active_nsam(self) -> list:
+    def active_nsam(self, parser_trajectories=False, use_fluents_map=False) -> list:
         """Active N-SAM to learn the action model and return the plan"""
 
         SOLUTIONS_PATH = Path(self.output_dir)
+
+        # create pddl trajectories
+        if parser_trajectories:
+            trajectory_creator = ExperimentTrajectoriesCreator(
+                domain_file_name="domain.pddl", working_directory_path=SOLUTIONS_PATH
+            )
+            selected_solver = SolverType.enhsp
+            trajectory_creator.fix_solution_files(selected_solver)
+            trajectory_creator.create_domain_trajectories()
 
         # run nsam
         domain = DomainParser(
             SOLUTIONS_PATH / "domain.pddl", partial_parsing=True
         ).parse_domain()
-        with open(SOLUTIONS_PATH / "fluents_map.json", "rt") as json_file:
-            fluents_map = json.load(json_file)
+        if use_fluents_map:
+            with open(SOLUTIONS_PATH / "fluents_map.json", "rt") as json_file:
+                fluents_map = json.load(json_file)
 
         observation_list = []
 
-        i = 1
-        while (
-            os.path.exists(trajectory := SOLUTIONS_PATH / f"pfile{i}.trajectory")
-            and os.path.getsize(trajectory) > 0
-        ):
+        all_files = os.listdir(SOLUTIONS_PATH)
+        trajectory_files = [file for file in all_files if file.endswith(".trajectory")]
+
+        for trajectory in trajectory_files:
             observation = TrajectoryParser(domain).parse_trajectory(
-                SOLUTIONS_PATH / f"pfile{i}.trajectory"
+                SOLUTIONS_PATH / f"{trajectory}"
             )
             observation_list.append(observation)
-            i += 1
 
-        numeric_sam = NumericSAMLearner(domain, fluents_map)
+        if use_fluents_map:
+            numeric_sam = NumericSAMLearner(domain, fluents_map)
+        else:
+            numeric_sam = NumericSAMLearner(domain)
         learned_model, _ = numeric_sam.learn_action_model(observation_list)
         learned_domain = learned_model.to_pddl()
-        domain_location = SOLUTIONS_PATH / f"domain{i-1}.pddl"
+        domain_location = SOLUTIONS_PATH / f"domain{len(trajectory_files)}.pddl"
         with open(domain_location, "w") as f:
             f.write(learned_domain)
 

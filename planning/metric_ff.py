@@ -55,7 +55,7 @@ class MetricFF:
                 break
         if exception_flag:
             planner.kill()
-            raise Exception("unknowned error")
+            raise Exception(f"unknowned error for {domain} {problem}")
 
         plan = []
         for line in planner.stdout:
