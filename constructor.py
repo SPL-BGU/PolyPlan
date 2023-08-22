@@ -10,8 +10,10 @@ from planning.enhsp import ENHSP
 from utils import ProblemGenerator
 import json
 
+import pandas as pd
 
-def generate_solutions_basic(output_directory_path: Path, problem_index: int):
+
+def generate_solutions_basic(output_directory_path: Path, problem_index: int) -> bool:
     domain = "/home/benjamin/Projects/PolyPlan/planning/basic_minecraft_domain.pddl"
     problem = f"{output_directory_path}/basic_map_instance_{problem_index}.pddl"
 
@@ -28,7 +30,9 @@ def generate_solutions_basic(output_directory_path: Path, problem_index: int):
     return True
 
 
-def generate_solutions_advanced(output_directory_path: Path, problem_index: int):
+def generate_solutions_advanced(
+    output_directory_path: Path, problem_index: int
+) -> bool:
     domain = "/home/benjamin/Projects/PolyPlan/planning/advanced_minecraft_domain.pddl"
     problem = f"{output_directory_path}/advanced_map_instance_{problem_index}.pddl"
 
@@ -47,7 +51,7 @@ def generate_solutions_advanced(output_directory_path: Path, problem_index: int)
 
 def generate_solutions_advanced_via_basic(
     output_directory_path: Path, problem_index: int
-):
+) -> bool:
     if not generate_solutions_basic(output_directory_path, problem_index):
         return False
 
@@ -94,7 +98,7 @@ def generate_solutions_advanced_via_basic(
     return True
 
 
-def valid_problem_basic(output_directory_path: Path, problem_index: int):
+def valid_problem_basic(output_directory_path: Path, problem_index: int) -> bool:
     env = BasicMinecraft(start_pal=False, keep_alive=True)
 
     domain_path = f"{output_directory_path}/map_instance_{problem_index}.json"
@@ -115,7 +119,7 @@ def valid_problem_basic(output_directory_path: Path, problem_index: int):
     return True
 
 
-def valid_problem_advanced(output_directory_path: Path, problem_index: int):
+def valid_problem_advanced(output_directory_path: Path, problem_index: int) -> bool:
     map_path = f"{output_directory_path}/map_instance_{problem_index}.json"
     with open(map_path, "r") as map_file:
         map_json = json.load(map_file)
@@ -141,6 +145,35 @@ def valid_problem_advanced(output_directory_path: Path, problem_index: int):
     return True
 
 
+def get_raw_data(map_path: str) -> dict:
+    problem_dict = {}
+
+    with open(map_path, "r") as map_file:
+        map_json = json.load(map_file)
+
+    # tree cell count
+    problem_dict["tree_count"] = len(map_json["features"][2]["blockList"]) - 1
+
+    # starting inventory count
+    for item in map_json["features"][5]["itemList"]:
+        item = item["itemDef"]
+        problem_dict[item["itemName"]] = item["count"]
+
+    # zero items that not start with
+    items = [
+        "minecraft:log",
+        "minecraft:planks",
+        "minecraft:stick",
+        "polycraft:sack_polyisoprene_pellets",
+        "polycraft:tree_tap",
+    ]
+    for item in items:
+        if item not in problem_dict:
+            problem_dict[item] = 0
+
+    return problem_dict
+
+
 if __name__ == "__main__":
     output_directory_path = f"/home/benjamin/Projects/PolyPlan/dataset/basic"
 
@@ -154,3 +187,10 @@ if __name__ == "__main__":
         success = valid_problem_basic(output_directory_path, i)
         if not success:
             raise Exception(f"Solution {i} not valid via simulator")
+
+    lst = []
+    for i in tqdm(range(1000)):
+        map_path = f"{output_directory_path}/map_instance_{i}.json"
+        lst.append(get_raw_data(map_path))
+    df = pd.DataFrame(lst)
+    df.to_csv(f"{output_directory_path}/raw_data.csv")
