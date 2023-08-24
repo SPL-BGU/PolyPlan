@@ -36,7 +36,7 @@ def generate_solutions_advanced(
     domain = "/home/benjamin/Projects/PolyPlan/planning/advanced_minecraft_domain.pddl"
     problem = f"{output_directory_path}/advanced_map_instance_{problem_index}.pddl"
 
-    planner = ENHSP()
+    planner = MetricFF()
     plan = planner.create_plan(domain, problem)
 
     if len(plan) == 0:
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     output_directory_path = f"/home/benjamin/Projects/PolyPlan/dataset/basic"
 
     generator = ProblemGenerator(None)
-    generator.generate_basic_problems(1000)
+    generator.generate_problems(num_maps_to_generate=1000, basic_only=True)
 
     for i in tqdm(range(1000)):
         success = generate_solutions_basic(output_directory_path, i)

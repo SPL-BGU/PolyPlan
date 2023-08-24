@@ -226,7 +226,7 @@ class ProblemGenerator:
 
     def generate_problems(
         self,
-        num_maps_to_generate: int = 30,
+        num_maps_to_generate: int = 100,
         map_size: int = 30,
         basic_only: bool = False,
     ) -> None:

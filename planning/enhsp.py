@@ -11,6 +11,7 @@ class ENHSP:
 
     def __init__(self):
         self.path = CONFIG.ENHSP_PATH
+        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
 
         # Check java version
         java_version = subprocess.check_output(
@@ -38,6 +39,7 @@ class ENHSP:
         :param tolerance: the tolerance for the planner - default is 0.01
         :param timeout: the timeout for the planner in seconds
         """
+        self.error_flag = 0
 
         # Check if the domain and problem files exist
         if not os.path.exists(domain):
@@ -59,6 +61,7 @@ class ENHSP:
         except subprocess.TimeoutExpired:
             print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
+            self.error_flag = 2
             return []
 
         exception_flag = False
@@ -66,9 +69,11 @@ class ENHSP:
             exception_flag = True
             if "Goal is not reachable" in str(line):
                 exception_flag = False
+                self.error_flag = 1
                 break
         if exception_flag:
             planner.kill()
+            self.error_flag = -1
             raise Exception(f"unknowned error for {domain} {problem}")
 
         plan = []
@@ -88,8 +93,9 @@ class ENHSP:
                         pass
                     line = str(planner.stdout.readline())
                 break
-            elif "Problem unsolvable" in str(line):
+            elif "Problem unsolvable" in str(line) or "Unsolvable" in str(line):
                 # print("Problem unsolvable")
+                self.error_flag = 1
                 break
 
         planner.kill()

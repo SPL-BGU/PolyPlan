@@ -8,6 +8,8 @@ class FixedScriptAgent(PolycraftAgent):
         self, env, filename: str = None, script: list = [], human_readable: bool = False
     ):
         super().__init__(env)
+        env.reset()
+
         if filename:
             file = open(filename, "r")
             self._actions_list = file.read().split("\n")

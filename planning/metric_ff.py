@@ -12,6 +12,7 @@ class MetricFF:
 
     def __init__(self):
         self.path = CONFIG.METRIC_FF_PATH
+        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
 
     def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
         """
@@ -20,6 +21,8 @@ class MetricFF:
         :param problem: the problem file - must be located in the planning folder
         :param timeout: the timeout for the planner in seconds
         """
+
+        self.error_flag = 0
 
         # Check if the domain and problem files exist
         if not os.path.exists(domain):
@@ -43,18 +46,17 @@ class MetricFF:
         except subprocess.TimeoutExpired:
             print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
+            self.error_flag = 2
             return []
 
         os.chdir(original_dir)
 
-        exception_flag = False
-        for line in planner.stderr:
-            exception_flag = True
-            if "not reachable" in str(line):
-                exception_flag = False
-                break
+        exception_flag = None
+        for exception_flag in planner.stderr:
+            break
         if exception_flag:
             planner.kill()
+            self.error_flag = -1
             raise Exception(f"unknowned error for {domain} {problem}")
 
         plan = []
@@ -71,8 +73,9 @@ class MetricFF:
                         pass
                     line = str(planner.stdout.readline())
                 break
-            elif "unsolvable" in str(line):
+            elif "unsolvable" in str(line) or "goal not fulfilled" in str(line):
                 # print("Problem unsolvable")
+                self.error_flag = 1
                 break
 
         planner.kill()
