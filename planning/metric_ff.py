@@ -2,6 +2,7 @@ import config as CONFIG
 import subprocess
 
 import os
+from pathlib import Path
 
 
 class MetricFF:
@@ -24,6 +25,9 @@ class MetricFF:
 
         self.error_flag = 0
 
+        domain = Path(domain).absolute()
+        problem = Path(problem).absolute()
+
         # Check if the domain and problem files exist
         if not os.path.exists(domain):
             raise Exception("Domain file not found")
@@ -44,7 +48,7 @@ class MetricFF:
         try:
             planner.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            print(f"Can't find a plan in {timeout} seconds")
+            # print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
             self.error_flag = 2
             return []

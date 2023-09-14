@@ -10,3 +10,4 @@ EVALUATION_DOMAINS_PATH = [
 ENHSP_PATH = "/home/benjamin/Projects/ENHSP"
 METRIC_FF_PATH = "/home/benjamin/Projects/METRIC_FF"
 NSAM_PATH = "/home/benjamin/Projects/numeric-sam"
+VALIDATOR_DIRECTORY = "/home/benjamin/Projects/VAL"
