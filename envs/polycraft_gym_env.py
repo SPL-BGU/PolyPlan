@@ -217,7 +217,9 @@ class PolycraftGymEnv(Env):
     def _senses(self) -> dict:
         """Sense the environment - return the state"""
 
-        while sense_all := self.server_controller.send_command("SENSE_ALL NONAV"):
+        while True:
+            sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+
             # sanity check - check sense_all have all the keys
             if not all(
                 item in sense_all
@@ -296,7 +298,7 @@ class PolycraftGymEnv(Env):
         if change[2] > 0:  # sticks
             reward += 0.004
         if change[3] == 1 and inventory_after[3] == 1:  # first time get rubber
-            reward = 0.1
+            reward += 0.1
         if change[4] > 0:  # tree tap
             reward += 0.1
         if change[5] > 0:  # wooden pogo

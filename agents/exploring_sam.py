@@ -85,7 +85,7 @@ class ExploringSam(PolycraftAgent):
         self.solvers = [MetricFF()]
         self.eval_mode = False
 
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir).absolute()
         shutil.copyfile(domain, f"{output_dir}/domain.pddl")
         shutil.copyfile(problem, f"{output_dir}/problem.pddl")
         shutil.copyfile(fluents_map, f"{output_dir}/fluents_map.json")
@@ -188,8 +188,8 @@ class ExploringSam(PolycraftAgent):
         # run solvers
         for solver in self.solvers:
             plan = solver.create_plan(
-                domain=f"{os.getcwd()}/{str(domain_location)}",
-                problem=f"{os.getcwd()}/{str(SOLUTIONS_PATH / 'problem.pddl')}",
+                domain=f"{str(domain_location)}",
+                problem=f"{str(SOLUTIONS_PATH / 'problem.pddl')}",
             )
             if len(plan) > 0:
                 break

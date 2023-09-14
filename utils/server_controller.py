@@ -47,7 +47,10 @@ class ServerController:
         if not data:  # RESET command returns no data
             data_dict = {}
         else:
-            data_dict = json.loads(data)
+            try:
+                data_dict = json.loads(data)
+            except:
+                data_dict = {}
         # print(data_dict)
         return data_dict
 

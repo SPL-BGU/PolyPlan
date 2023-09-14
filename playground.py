@@ -40,9 +40,13 @@ from gym.wrappers import RecordEpisodeStatistics
 from utils import Logger
 
 import numpy as np
+import random
+import torch
 
 SEED = 63
 np.random.seed(SEED)  # random seed for reproducibility
+random.seed(SEED)
+torch.manual_seed(SEED)
 
 
 def train_rl_agent(

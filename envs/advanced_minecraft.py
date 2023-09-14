@@ -151,18 +151,18 @@ class AdvancedMinecraft(PolycraftGymEnv):
         # update the reward
         reward = 0
         change = [int(inventory_after[i]) - int(inventory_before[i]) for i in range(6)]
-        if change[0] > 0:  # log
-            reward += 1
-        if change[1] > 0:  # planks
-            reward += 2
-        if change[2] > 0:  # sticks
-            reward += 2
-        if change[3] > 0:  # get rubber
-            reward += 100
-        if change[4] > 0:  # tree tap
-            reward += 10
+        # if change[0] > 0:  # log
+        #     reward += 0.002
+        # if change[1] > 0:  # planks
+        #     reward += 0.004
+        # if change[2] > 0:  # sticks
+        #     reward += 0.004
+        # if change[3] > 0:  # get rubber
+        #     reward += 0.1
+        # if change[4] > 0:  # tree tap
+        #     reward += 0.1
         if change[5] > 0:  # wooden pogo
-            reward += 1000
+            reward += 1
 
         # update the reward
         self.reward = reward
@@ -173,6 +173,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
         return self.reward
 
     def is_game_over(self) -> bool:
-        done = (self.reward == 1000) or (self.rounds_left == 0)
+        done = (self.reward == 1) or (self.rounds_left == 0)
         self.done = done
         return done

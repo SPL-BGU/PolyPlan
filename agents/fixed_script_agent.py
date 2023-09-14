@@ -54,3 +54,7 @@ class FixedScriptAgent(PolycraftAgent):
     def reset_script(self):
         """Reset the script to the beginning"""
         self._current_action = 0
+
+    @property
+    def length(self) -> int:
+        return len(self._actions_list)
