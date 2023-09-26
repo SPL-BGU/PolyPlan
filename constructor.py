@@ -2,7 +2,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from envs import BasicMinecraft, AdvancedMinecraft
-from agents import FixedScriptAgent
+from agents import FixedScriptAgent, LearningAgent
 
 from planning.metric_ff import MetricFF
 from planning.enhsp import ENHSP
@@ -11,6 +11,13 @@ from utils import ProblemGenerator
 import json
 
 import pandas as pd
+
+import numpy as np
+import random
+
+SEED = 63
+np.random.seed(SEED)  # random seed for reproducibility
+random.seed(SEED)
 
 
 def generate_solutions_basic(output_directory_path: Path, problem_index: int) -> bool:
@@ -145,6 +152,29 @@ def valid_problem_advanced(output_directory_path: Path, problem_index: int) -> b
     return True
 
 
+def rule_them_all(output_directory_path: Path, problem_index: int) -> bool:
+    env = BasicMinecraft(start_pal=False, keep_alive=True)
+
+    domain_path = f"{output_directory_path}/map_instance_{problem_index}.json"
+    env.set_domain(domain_path)
+
+    filename = "agents/scripts/macro_actions_script.txt"
+    fixed_script_agent = FixedScriptAgent(env, filename=filename, human_readable=True)
+
+    env.reset()
+    reward = 0
+    for _ in range(fixed_script_agent.length):
+        fixed_script_agent.act()
+        reward += env.reward
+        if env.done:
+            break
+    env.close()
+
+    if reward == 0:
+        return False
+    return True
+
+
 def get_raw_data(map_path: str) -> dict:
     problem_dict = {}
 
@@ -175,22 +205,104 @@ def get_raw_data(map_path: str) -> dict:
 
 
 if __name__ == "__main__":
-    output_directory_path = f"/home/benjamin/Projects/PolyPlan/dataset/basic"
+    solve_counting = False
+    map_size = 6
+    num_maps_to_generate = 1000
 
-    generator = ProblemGenerator(None)
-    generator.generate_problems(num_maps_to_generate=1000, basic_only=True)
+    output_directory_path = f"dataset/{map_size}X{map_size}"
 
-    for i in tqdm(range(1000)):
-        success = generate_solutions_basic(output_directory_path, i)
+    # generate problems
+    generator = ProblemGenerator("dataset/")
+    generator.generate_problems(
+        num_maps_to_generate=num_maps_to_generate, map_size=map_size, basic_only=False
+    )
+
+    # generate planning solutions for counting map
+    if solve_counting:
+        for i in tqdm(range(num_maps_to_generate)):  # time taken: 2h
+            success = generate_solutions_basic(output_directory_path, i)
+            if not success:
+                raise Exception(f"No solution found for problem {i} via solver")
+            success = valid_problem_basic(output_directory_path, i)
+            if not success:
+                raise Exception(f"Solution {i} not valid via simulator")
+
+    # generate planning solutions for advanced map
+    for i in tqdm(range(num_maps_to_generate)):  # time taken: 2h
+        success = generate_solutions_advanced(output_directory_path, i)
         if not success:
             raise Exception(f"No solution found for problem {i} via solver")
-        success = valid_problem_basic(output_directory_path, i)
+        success = valid_problem_advanced(output_directory_path, i)
         if not success:
             raise Exception(f"Solution {i} not valid via simulator")
 
+    map_name = f"{map_size}X{map_size}"
+
+    # generate RL solutions for counting map
+    if solve_counting:
+        env = BasicMinecraft(visually=False, start_pal=False, keep_alive=True)
+        for i in tqdm(range(num_maps_to_generate)):  # time taken: 3h
+            domain_path = f"dataset/{map_name}/map_instance_{i}.json"
+            env.set_domain(domain_path)
+            filename = f"dataset/{map_name}/basic_map_instance_{i}.solution"
+            fixed_script_agent = FixedScriptAgent(
+                env, filename=filename, human_readable=False
+            )
+
+            learning_agent = LearningAgent(env, fixed_script_agent, for_planning=False)
+
+            sol = f"dataset/{map_name}/basic_map_instance_{i}.pkl"
+            learning_agent.record_trajectory()
+            learning_agent.export_trajectory(sol)
+        env.close()
+
+    # generate RL solutions for advanced map
+    env = AdvancedMinecraft(
+        visually=False, start_pal=False, keep_alive=True, map_size=map_size
+    )
+    for i in tqdm(range(num_maps_to_generate)):  # time taken: 3h
+        domain_path = f"dataset/{map_name}/map_instance_{i}.json"
+        env.set_domain(domain_path)
+        filename = f"dataset/{map_name}/advanced_map_instance_{i}.solution"
+        fixed_script_agent = FixedScriptAgent(
+            env, filename=filename, human_readable=False
+        )
+
+        learning_agent = LearningAgent(env, fixed_script_agent, for_planning=False)
+
+        sol = f"dataset/{map_name}/advanced_map_instance_{i}.pkl"
+        learning_agent.record_trajectory()
+        learning_agent.export_trajectory(sol)
+    env.close()
+
+    # raw data of the generated maps
     lst = []
-    for i in tqdm(range(1000)):
+    for i in tqdm(range(num_maps_to_generate)):
         map_path = f"{output_directory_path}/map_instance_{i}.json"
         lst.append(get_raw_data(map_path))
     df = pd.DataFrame(lst)
-    df.to_csv(f"{output_directory_path}/raw_data.csv")
+    column_stats = df.agg(["min", "max", "mean", "std"])
+    column_stats = column_stats.rename(
+        index={
+            "min": "Range (Min)",
+            "max": "Range (Max)",
+            "mean": "Average (Mean)",
+            "std": "Standard Deviation",
+        }
+    )
+    duplicate_rows = df[df.duplicated(keep=False)]
+    duplicate_count = len(duplicate_rows)
+    duplicate_count_df = pd.DataFrame({"Duplicate_Count": [duplicate_count]})
+    column_stats = pd.concat([column_stats, duplicate_count_df], ignore_index=True)
+
+    # rule them all count
+    # rule_count = 0
+    # for i in tqdm(range(num_maps_to_generate)):
+    #     success = rule_them_all(output_directory_path, i)
+    #     if success:
+    #         rule_count += 1
+    # print(rule_count)
+    # rule_count_df = pd.DataFrame({"Rule_Count": [rule_count]})
+    # column_stats = pd.concat([column_stats, rule_count_df], ignore_index=True)
+
+    column_stats.to_csv(f"{output_directory_path}/raw_data.csv", index=True)

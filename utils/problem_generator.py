@@ -1,17 +1,25 @@
 import os
 import json
-import random
 import shutil
+
 from typing import List, Dict, Tuple
 from pathlib import Path
+
 import config as CONFIG
+from planning.metric_ff import MetricFF
 
 from pddl_plus_parser.problem_generators import get_problem_template
 
+import numpy as np
+import random
+
+SEED = 63
+np.random.seed(SEED)  # random seed for reproducibility
+random.seed(SEED)
+
 
 class ProblemGenerator:
-    def __init__(self, env, output_dir="dataset/"):
-        self.env = env
+    def __init__(self, output_dir="dataset/"):
         self.example_map_path = Path(
             f"{CONFIG.PAL_PATH}/available_tests/pogo_nonov.json"
         )
@@ -19,6 +27,9 @@ class ProblemGenerator:
         self.compiled_json_file = Path(
             f"{CONFIG.PAL_PATH}/available_tests/pogo_nonov.json2"
         )
+
+        self.planner = MetricFF()
+        self.domain = "planning/basic_minecraft_domain.pddl"
 
     def basic_pddl_minecraft_generate(
         self,
@@ -120,7 +131,7 @@ class ProblemGenerator:
         one_space = lambda x: [x[0], x[1], x[2] + 1]
         two_space = lambda x: [x[0], x[1], x[2] + 2]
 
-        num_trees = random.randint(3, max_num_trees)
+        num_trees = random.randint(0, max_num_trees)
         tree_locations_in_map = []
 
         # crafting table location
@@ -269,14 +280,12 @@ class ProblemGenerator:
                 agent_starting_location,
                 initial_inventory,
                 items_count,
-            ) = self.generate_maps(map_json, map_size, 300, items_range)
-
-            tree_count = len(tree_locations_in_map)
-            if tree_count < 3:
-                i -= 1
-                continue
+            ) = self.generate_maps(
+                map_json, map_size, map_size * (map_size / 3), items_range
+            )
 
             # check if duplicte
+            tree_count = len(tree_locations_in_map)
             if basic_only:
                 generated_map = str([tree_count] + initial_inventory)
             else:
@@ -289,22 +298,10 @@ class ProblemGenerator:
             if generated_map in generated_maps:
                 i -= 1
                 continue
-            generated_maps[generated_map] = True
-
-            # save map
-            output_map_file_path = output_directory_path / f"map_instance_{i}.json"
-            with open(output_map_file_path, "wt") as output:
-                json.dump(map_json, output)
-
-            shutil.copy(
-                self.compiled_json_file,
-                output_directory_path / f"map_instance_{i}.json2",
-            )
 
             # generate basic minecraft pddl
-            with open(
-                output_directory_path / f"basic_map_instance_{i}.pddl", "wt"
-            ) as problem_file:
+            problem = output_directory_path / f"basic_map_instance_{i}.pddl"
+            with open(problem, "wt") as problem_file:
                 problem_file.write(
                     self.basic_pddl_minecraft_generate(
                         instance_name=f"instance_{i}",
@@ -318,6 +315,23 @@ class ProblemGenerator:
                         count_tree_tap_in_inventory=items_count["polycraft:tree_tap"],
                     )
                 )
+
+            plan = self.planner.create_plan(self.domain, problem, timeout=2)
+            if len(plan) == 0:
+                i -= 1
+                continue
+
+            generated_maps[generated_map] = True
+
+            # save map
+            output_map_file_path = output_directory_path / f"map_instance_{i}.json"
+            with open(output_map_file_path, "wt") as output:
+                json.dump(map_json, output)
+
+            shutil.copy(
+                self.compiled_json_file,
+                output_directory_path / f"map_instance_{i}.json2",
+            )
 
             # generate advanced minecraft pddl
             if not basic_only:
