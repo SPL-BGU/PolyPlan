@@ -9,6 +9,8 @@ from utils import ServerController
 from utils import ActionsDecoder, SingleActionDecoder
 import config as CONFIG
 from typing import Union, List
+import copy
+import os
 
 
 class PolycraftGymEnv(Env):
@@ -128,6 +130,7 @@ class PolycraftGymEnv(Env):
             }
         )
         self.state = flatten(self._observation_space, self._state)
+        self.last_state = None
 
         self.collected_reward = 0
 
@@ -167,6 +170,9 @@ class PolycraftGymEnv(Env):
         pass
 
     def reset(self) -> np.ndarray:
+        # save the last state
+        self.last_state = copy.deepcopy(self._state)
+
         # reset the environment
         self.server_controller.send_command(f"RESET domain {self._domain_path}")
         if self.pal_owner:
@@ -212,6 +218,8 @@ class PolycraftGymEnv(Env):
         return super().close()
 
     def set_domain(self, path: str) -> None:
+        if not os.path.exists(path):
+            raise Exception("Domain file not found")
         self._domain_path = path
 
     def _senses(self) -> dict:

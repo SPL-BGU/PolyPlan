@@ -52,8 +52,8 @@ class MetricFF:
             planner.kill()
             self.error_flag = 2
             return []
-
-        os.chdir(original_dir)
+        finally:
+            os.chdir(original_dir)
 
         exception_flag = None
         for exception_flag in planner.stderr:

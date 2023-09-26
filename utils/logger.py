@@ -76,14 +76,18 @@ class RecordTrajectories(BaseCallback):
         action = self.locals["actions"][0]
         action = env.decoder.decode_to_planning(action)
         self.file.write(f"(operator: ({action}))\n")
-        translate = self.translate(env._state)
-        self.file.write(f"(:state {translate}\n")
 
         if env.rounds_left == env.max_rounds or env.done:
+            translate = self.translate(env.last_state)
+            self.file.write(f"(:state {translate}\n")
+
             self.file.write(f")\n")
             self.file.close()
             self.episodes += 1
             self.file = open(f"{self.output_dir}/pfile{self.episodes}.trajectory", "w")
+        else:
+            translate = self.translate(env._state)
+            self.file.write(f"(:state {translate}\n")
 
         return True
 
@@ -107,5 +111,5 @@ class RecordTrajectories(BaseCallback):
             df = pd.DataFrame(results, columns=["score", "length"])
             df.to_csv(f"{self.output_dir}/summary.csv")
 
-    def _on_training_end(self) -> None:
-        os.remove(f"{self.output_dir}/pfile{self.episodes}.trajectory")
+    # def _on_training_end(self) -> None:
+    #     os.remove(f"{self.output_dir}/pfile{self.episodes}.trajectory")

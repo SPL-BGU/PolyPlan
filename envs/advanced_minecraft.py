@@ -21,11 +21,13 @@ class AdvancedMinecraft(PolycraftGymEnv):
         rounds: actions in the environment until reset
     """
 
-    def __init__(self, map_size=30, **kwargs):
+    def __init__(self, map_size=30, rounds: int = 128, **kwargs):
         map_size_square = map_size**2
 
         # PolycraftGymEnv
-        super().__init__(**kwargs, decoder=AdvancedActionsDecoder(map_size_square))
+        super().__init__(
+            rounds=rounds, **kwargs, decoder=AdvancedActionsDecoder(map_size_square)
+        )
 
         self.map_size = map_size
 
@@ -94,7 +96,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
             )
         }
 
-        self.max_rounds = 128
         self.decoder.agent_state = self.last_pos
 
     def move_to_start(self) -> None:

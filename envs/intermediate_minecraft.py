@@ -21,9 +21,9 @@ class IntermediateMinecraft(PolycraftGymEnv):
         rounds: actions in the environment until reset
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, rounds: int = 128, **kwargs):
         # PolycraftGymEnv
-        super().__init__(**kwargs, decoder=IntermediateActionsDecoder())
+        super().__init__(rounds=rounds, **kwargs, decoder=IntermediateActionsDecoder())
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(
@@ -88,7 +88,6 @@ class IntermediateMinecraft(PolycraftGymEnv):
             )
         }
 
-        self.max_rounds = 128
         self.decoder.agent_state = self.last_pos
 
     def move_to_start(self) -> None:
