@@ -1,4 +1,4 @@
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent
 import pickle, json
 from imitation.data import rollout
 from stable_baselines3.common.vec_env import DummyVecEnv

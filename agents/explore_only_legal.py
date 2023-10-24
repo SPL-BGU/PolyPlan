@@ -1,4 +1,4 @@
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent
 import numpy as np
 import pandas as pd
 from random import choice

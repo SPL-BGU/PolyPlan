@@ -1,4 +1,4 @@
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent
 import networkx as nx
 from random import choice
 

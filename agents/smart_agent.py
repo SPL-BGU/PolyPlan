@@ -1,4 +1,4 @@
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent
 from numpy import ndarray
 from numpy.random import choice as random_choice
 

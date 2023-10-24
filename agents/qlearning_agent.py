@@ -1,6 +1,6 @@
 from stable_baselines3.common.type_aliases import MaybeCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent
 import numpy as np
 import pandas as pd
 from tqdm import tqdm

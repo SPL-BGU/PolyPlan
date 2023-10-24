@@ -1,4 +1,4 @@
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent, FixedScriptAgent
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.type_aliases import MaybeCallback
 from utils import Logger
@@ -9,8 +9,6 @@ import sys
 import json
 import shutil
 from pathlib import Path
-
-from agents import FixedScriptAgent
 
 sys.path.append("planning")
 sys.path.append(CONFIG.NSAM_PATH)

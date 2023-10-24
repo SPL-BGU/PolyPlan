@@ -1,4 +1,4 @@
-from agents.polycraft_agent import PolycraftAgent
+from agents import PolycraftAgent
 
 
 class RandomAgent(PolycraftAgent):

@@ -277,7 +277,7 @@ if __name__ == "__main__":
 
     # raw data of the generated maps
     lst = []
-    for i in tqdm(range(num_maps_to_generate)):
+    for i in range(num_maps_to_generate):
         map_path = f"{output_directory_path}/map_instance_{i}.json"
         lst.append(get_raw_data(map_path))
     df = pd.DataFrame(lst)
