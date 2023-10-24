@@ -1,8 +1,8 @@
-from envs import IntermediateMinecraft
+from envs import AdvancedMinecraft
 from agents.explore_only_legal import ExploreOnlyLegal
 
 
-class MaskedMinecraft(IntermediateMinecraft):
+class MaskedMinecraft(AdvancedMinecraft):
     """
     Wrapper to any PolycraftGymEnv that add invalid action masking to the environment
 

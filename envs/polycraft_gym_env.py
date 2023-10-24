@@ -9,6 +9,7 @@ from utils import ServerController
 from utils import ActionsDecoder, SingleActionDecoder
 import config as CONFIG
 from typing import Union, List
+from pathlib import Path
 import copy
 import os
 
@@ -30,7 +31,7 @@ class PolycraftGymEnv(Env):
         visually: bool = False,
         start_pal: bool = True,
         keep_alive: bool = False,
-        rounds: int = 64,
+        rounds: int = 32,
         decoder: ActionsDecoder = SingleActionDecoder(),
     ):
         # start polycraft server
@@ -157,6 +158,12 @@ class PolycraftGymEnv(Env):
 
         self._sense_all()  # update the state and get reward
 
+        # uncomment to check if action is valid
+        # info["success"] = any(
+        #     not np.array_equal(self._state[key], self.last_state[key])
+        #     for key in self._state
+        # )
+
         done = self.is_game_over()
 
         return self.state, float(self.reward), done, info
@@ -218,8 +225,13 @@ class PolycraftGymEnv(Env):
         return super().close()
 
     def set_domain(self, path: str) -> None:
-        if not os.path.exists(path):
-            raise Exception("Domain file not found")
+        # path must be absolute
+        path = str(Path(path).absolute())
+
+        # path must be json file and have json2 with the same name
+        if not os.path.exists(path) or not os.path.exists(path + "2"):
+            raise Exception(f"Domain file not found (path: {path})")
+
         self._domain_path = path
 
     def _senses(self) -> dict:

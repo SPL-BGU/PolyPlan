@@ -21,7 +21,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
         rounds: actions in the environment until reset
     """
 
-    def __init__(self, map_size=30, rounds: int = 128, **kwargs):
+    def __init__(self, map_size=30, rounds: int = 32, **kwargs):
         map_size_square = map_size**2
 
         # PolycraftGymEnv

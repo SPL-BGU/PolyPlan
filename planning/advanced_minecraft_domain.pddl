@@ -59,7 +59,7 @@
     (:action CRAFT_PLANK
         :parameters ()
         :precondition (and
-            (> (count_log_in_inventory) 0)
+            (>= (count_log_in_inventory) 1)
         )
         :effect (and
             (decrease (count_log_in_inventory) 1)
@@ -82,8 +82,8 @@
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
-            (> (count_planks_in_inventory) 4)
-            (> (count_stick_in_inventory) 0)
+            (>= (count_planks_in_inventory) 5)
+            (>= (count_stick_in_inventory) 1)
         )
         :effect (and
             (not (position ?pos))
@@ -98,9 +98,9 @@
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
-            (> (count_planks_in_inventory) 1)
-            (> (count_stick_in_inventory) 3)
-            (> (count_sack_polyisoprene_pellets_in_inventory) 0)
+            (>= (count_planks_in_inventory) 2)
+            (>= (count_stick_in_inventory) 4)
+            (>= (count_sack_polyisoprene_pellets_in_inventory) 1)
         )
         :effect (and
             (not (position ?pos))
@@ -119,7 +119,7 @@
         :precondition (and
             (position ?pos)
             (tree_cell ?pos)
-            (> (count_tree_tap_in_inventory) 0)
+            (>= (count_tree_tap_in_inventory) 1)
         )
         :effect (and
             (increase

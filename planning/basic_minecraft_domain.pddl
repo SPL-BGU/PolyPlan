@@ -24,7 +24,7 @@
     (:action GET_LOG
         :parameters ()
         :precondition (and
-            (> (trees_in_map) 0)
+            (>= (trees_in_map) 1)
         )
         :effect (and
             (decrease (trees_in_map) 1)
@@ -35,7 +35,7 @@
     (:action CRAFT_PLANK
         :parameters ()
         :precondition (and
-            (> (count_log_in_inventory) 0)
+            (>= (count_log_in_inventory) 1)
         )
         :effect (and
             (decrease (count_log_in_inventory) 1)
@@ -46,7 +46,7 @@
     (:action CRAFT_STICK
         :parameters ()
         :precondition (and
-            (> (count_planks_in_inventory) 1)
+            (>= (count_planks_in_inventory) 2)
         )
         :effect (and
             (decrease (count_planks_in_inventory) 2)
@@ -57,8 +57,8 @@
     (:action CRAFT_TREE_TAP
         :parameters ()
         :precondition (and
-            (> (count_planks_in_inventory) 4)
-            (> (count_stick_in_inventory) 0)
+            (>= (count_planks_in_inventory) 5)
+            (>= (count_stick_in_inventory) 1)
         )
         :effect (and
             (decrease (count_planks_in_inventory) 5)
@@ -87,8 +87,8 @@
     (:action PLACE_TREE_TAP
         :parameters ()
         :precondition (and
-            (> (trees_in_map) 0)
-            (> (count_tree_tap_in_inventory) 0)
+            (>= (trees_in_map) 1)
+            (>= (count_tree_tap_in_inventory) 1)
         )
         :effect (and
             (increase
