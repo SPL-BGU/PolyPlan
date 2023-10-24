@@ -261,17 +261,19 @@ class ProblemGenerator:
 
         i = -1
         while (i := i + 1) < num_maps_to_generate:
-            if i < int(num_maps_to_generate / 5):
-                items_range = [64, 64, 64, 1, 1]
-            elif i < int(num_maps_to_generate * 2 / 5):
-                items_range = [32, 32, 32, 1, 0]
-            elif i < int(num_maps_to_generate * 3 / 5):
-                items_range = [16, 16, 16, 0, 0]
-            elif i < int(num_maps_to_generate * 4 / 5):
-                items_range = [8, 8, 0, 0, 0]
-            else:
-                items_range = [0, 0, 0, 0, 0]
+            # if i < int(num_maps_to_generate / 5):
+            #     items_range = [16, 16, 16, 1, 1]
+            # elif i < int(num_maps_to_generate * 2 / 5):
+            #     items_range = [8, 8, 8, 1, 0]
+            # elif i < int(num_maps_to_generate * 3 / 5):
+            #     items_range = [16, 16, 16, 0, 0]
+            # elif i < int(num_maps_to_generate * 4 / 5):
+            #     items_range = [8, 8, 0, 0, 0]
+            # else:
+            #     items_range = [0, 0, 0, 0, 0]
 
+            # items_range = [8, 8, 8, 1, 1]
+            items_range = [8, 8, 8, 0, 0]
             with open(self.example_map_path, "r") as map_file:
                 map_json = json.load(map_file)
             (
@@ -281,7 +283,7 @@ class ProblemGenerator:
                 initial_inventory,
                 items_count,
             ) = self.generate_maps(
-                map_json, map_size, map_size * (map_size / 3), items_range
+                map_json, map_size, map_size * int(map_size / 3), items_range
             )
 
             # check if duplicte
