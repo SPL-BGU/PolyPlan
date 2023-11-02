@@ -85,10 +85,10 @@ def main(map_type, map_size, planner, use_fluents_map):
         fluents_map = "planning/advanced_minecraft_fluents_map.json"
 
     if map_type == "basic":
-        env = minecraft(visually=False, start_pal=False, keep_alive=True)
+        env = minecraft(visually=False, start_pal=True, keep_alive=False)
     elif map_type == "advanced":
         env = minecraft(
-            visually=False, start_pal=False, keep_alive=True, map_size=map_size
+            visually=False, start_pal=True, keep_alive=False, map_size=map_size
         )
 
     map_size = f"{map_size}X{map_size}"

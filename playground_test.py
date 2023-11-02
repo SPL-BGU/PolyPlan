@@ -25,7 +25,7 @@ def main():
     ][env_index]
 
     # start&close pal
-    env = minecraft(visually=False, start_pal=True, keep_alive=False)
+    env = minecraft(visually=False, start_pal=True, keep_alive=False, debug_pal=True)
     env.reset()
     env.close()
 

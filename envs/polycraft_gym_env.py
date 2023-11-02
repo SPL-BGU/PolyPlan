@@ -33,6 +33,7 @@ class PolycraftGymEnv(Env):
         keep_alive: bool = False,
         rounds: int = 32,
         decoder: ActionsDecoder = SingleActionDecoder(),
+        debug_pal: bool = False,
     ):
         # start polycraft server
         self._q = queue.Queue()
@@ -43,7 +44,7 @@ class PolycraftGymEnv(Env):
         if start_pal:
             self._start_pal()  # time to start pal is 35 seconds
             while "Minecraft finished loading" not in str(self._next_line):
-                self._next_line = self._check_queues()
+                self._next_line = self._check_queues(debug_pal)
         self.pal_owner = start_pal
         self._keep_alive = keep_alive
 
@@ -387,7 +388,7 @@ class PolycraftGymEnv(Env):
                 sys.stdout.flush()
                 pipe.stdout.flush()
 
-    def _check_queues(self, check_all: bool = False):
+    def _check_queues(self, debug_pal: bool = False):
         """
         Check the STDOUT queues in both the PAL and Agent threads, logging the responses appropriately
         :return: next_line containing the STDOUT of the PAL process only:
@@ -399,6 +400,8 @@ class PolycraftGymEnv(Env):
         # DN: Remove "blockInFront" data from PAL, as it just gunks up our PAL logs for no good reason.
         try:
             next_line = self._q.get(False, timeout=0.025)
+            if debug_pal:
+                print(next_line)
             sys.stdout.flush()
             sys.stderr.flush()
         except queue.Empty:
