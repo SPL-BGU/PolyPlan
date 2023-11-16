@@ -54,7 +54,7 @@ def evaluate(env, model, test_set, id, map_size):
     return sum(avg) / len(avg)
 
 
-def main(map_type, map_size, learning_method, fold):
+def main(map_type, map_size, learning_method, fold, max_steps):
     if map_type == "basic":
         env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft, 3: MaskedMinecraft
     elif map_type == "advanced":
@@ -68,10 +68,16 @@ def main(map_type, map_size, learning_method, fold):
     ][env_index]
 
     if map_type == "basic":
-        env = minecraft(visually=False, start_pal=True, keep_alive=False)
+        env = minecraft(
+            visually=False, start_pal=True, keep_alive=False, max_steps=max_steps
+        )
     elif map_type == "advanced":
         env = minecraft(
-            visually=False, start_pal=True, keep_alive=False, map_size=map_size
+            visually=False,
+            start_pal=True,
+            keep_alive=False,
+            max_steps=max_steps,
+            map_size=map_size,
         )
 
     map_size = f"{map_size}X{map_size}"
@@ -169,14 +175,19 @@ def main(map_type, map_size, learning_method, fold):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 6:
+        max_steps = int(sys.argv[5])
+    else:
+        max_steps = 32
+
     if len(sys.argv) == 5:
         map_type = sys.argv[1]
         map_size = int(sys.argv[2])
         learning_method = sys.argv[3]
         fold = int(sys.argv[4])
-        main(map_type, map_size, learning_method, fold)
+        main(map_type, map_size, learning_method, fold, max_steps)
     else:
         print("Please provide a variable as a command-line argument.")
         print(
-            "Example: python playground_online.py [basic/advanced] [6/10] [PPO/DQN] [0-4]"
+            "Example: python playground_online.py map_type[basic/advanced] map_size[6/10] algorithm[PPO/DQN] fold[0-4] optional_max_steps[32*X]"
         )

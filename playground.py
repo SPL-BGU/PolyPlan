@@ -356,7 +356,7 @@ def main():
         "Masked-PPO",
     ][learning_index]
     timesteps: int = 1024
-    save_freq = env.max_rounds * 8
+    save_freq = env.max_steps * 8
 
     # train the model
     if learning_method == "Q-Learning":

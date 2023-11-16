@@ -3,10 +3,8 @@ from gym.spaces import Box, Discrete
 from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
-from math import sqrt
 from collections import OrderedDict
 from utils import AdvancedActionsDecoder
-from typing import Union, List
 
 
 class AdvancedMinecraft(PolycraftGymEnv):
@@ -18,15 +16,17 @@ class AdvancedMinecraft(PolycraftGymEnv):
         visually: if True, the environment will be displayed in the screen
         start_pal: if True, the pal will be started
         keep_alive: if True, the pal will be kept alive after the environment is closed
-        rounds: actions in the environment until reset
+        max_steps: actions in the environment until reset
     """
 
-    def __init__(self, map_size=30, rounds: int = 32, **kwargs):
+    def __init__(self, map_size=30, max_steps: int = 32, **kwargs):
         map_size_square = map_size**2
 
         # PolycraftGymEnv
         super().__init__(
-            rounds=rounds, **kwargs, decoder=AdvancedActionsDecoder(map_size_square)
+            max_steps=max_steps,
+            **kwargs,
+            decoder=AdvancedActionsDecoder(map_size_square),
         )
 
         self.map_size = map_size
@@ -174,6 +174,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
         return self.reward
 
     def is_game_over(self) -> bool:
-        done = (self.reward == 1) or (self.rounds_left == 0)
+        done = (self.reward == 1) or (self.steps_left == 0)
         self.done = done
         return done

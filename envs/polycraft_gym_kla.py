@@ -17,10 +17,8 @@ class PolycraftGymKLA(gym.Wrapper):
         self, env: PolycraftGymEnv, k: int = 1, expert_actions: int = 11, **kwargs
     ):
         # PolycraftGymEnv
-        self.env = env(**kwargs)
+        self.env = env(max_steps=expert_actions, **kwargs)
         super().__init__(self.env)
-        self.env.max_rounds = expert_actions
-        self.env.rounds_left = expert_actions
 
         self.expert = FixedScriptAgent(self, "my_script.txt", human_readable=True)
         self.k = expert_actions - k

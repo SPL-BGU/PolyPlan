@@ -77,7 +77,7 @@ class RecordTrajectories(BaseCallback):
         action = env.decoder.decode_to_planning(action)
         self.file.write(f"(operator: ({action}))\n")
 
-        if env.rounds_left == env.max_rounds or env.done:
+        if env.steps_left == env.max_steps or env.done:
             translate = self.translate(env.last_state)
             self.file.write(f"(:state {translate}\n")
 

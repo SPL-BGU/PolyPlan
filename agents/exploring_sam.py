@@ -197,7 +197,7 @@ class ExploringSam(PolycraftAgent):
     def save_plan(self, plan):
         """Save the plan"""
         if len(plan) == 0:
-            print(f"score: 0, length: {self.env.max_rounds}")
+            print(f"score: 0, length: {self.env.max_steps}")
         else:
             print(f"score: 1, length: {len(plan)}")
 

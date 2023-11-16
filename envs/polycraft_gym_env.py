@@ -23,7 +23,7 @@ class PolycraftGymEnv(Env):
         visually: if True, the environment will be displayed in the screen
         start_pal: if True, the pal will be started
         keep_alive: if True, the pal will be kept alive after the environment is closed
-        rounds: actions in the environment until reset
+        max_steps: actions in the environment until reset
     """
 
     def __init__(
@@ -31,7 +31,7 @@ class PolycraftGymEnv(Env):
         visually: bool = False,
         start_pal: bool = True,
         keep_alive: bool = False,
-        rounds: int = 32,
+        max_steps: int = 32,
         decoder: ActionsDecoder = SingleActionDecoder(),
         debug_pal: bool = False,
     ):
@@ -140,16 +140,16 @@ class PolycraftGymEnv(Env):
         self.done = False
         self.reward = 0
 
-        # no. of rounds
-        self.max_rounds = rounds
-        self.rounds_left = rounds
+        # no. of steps
+        self.max_steps = max_steps
+        self.steps_left = max_steps
 
     def decode_action_type(self, action: int) -> List[str]:
         return self.decoder.decode_action_type(action, self._state)
 
     def step(self, action: int) -> tuple:
         info = {}
-        self.rounds_left -= 1
+        self.steps_left -= 1
 
         command_list = self.decode_action_type(action)
         self.action = command_list
@@ -170,7 +170,7 @@ class PolycraftGymEnv(Env):
         return self.state, float(self.reward), done, info
 
     def is_game_over(self) -> bool:
-        done = (self.reward == 1) or (self.rounds_left == 0)
+        done = (self.reward == 1) or (self.steps_left == 0)
         self.done = done
         return done
 
@@ -205,11 +205,15 @@ class PolycraftGymEnv(Env):
         self.action = None
         self.done = False
         self._sense_all()
-        self.rounds_left = self.max_rounds
+        self.steps_left = self.max_steps
         return self.state
 
+    def set_max_steps(self, steps: int) -> None:
+        self.max_steps = steps
+        self.steps_left = steps
+
     def render(self) -> None:
-        print(f"Rounds Left: {self.rounds_left}")
+        print(f"Steps Left: {self.steps_left}")
         print(f"Action: {self.action}")
         # print(f"State: {self.state}")
         print(f"Reward: {self.reward}")

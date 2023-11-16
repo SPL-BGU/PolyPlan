@@ -18,12 +18,14 @@ class IntermediateMinecraft(PolycraftGymEnv):
         visually: if True, the environment will be displayed in the screen
         start_pal: if True, the pal will be started
         keep_alive: if True, the pal will be kept alive after the environment is closed
-        rounds: actions in the environment until reset
+        max_steps: actions in the environment until reset
     """
 
-    def __init__(self, rounds: int = 128, **kwargs):
+    def __init__(self, max_steps: int = 128, **kwargs):
         # PolycraftGymEnv
-        super().__init__(rounds=rounds, **kwargs, decoder=IntermediateActionsDecoder())
+        super().__init__(
+            max_steps=max_steps, **kwargs, decoder=IntermediateActionsDecoder()
+        )
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(

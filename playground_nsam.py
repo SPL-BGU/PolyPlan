@@ -58,7 +58,7 @@ def evaluate(env, plan, test_set, map_size):
     return sum(avg) / len(avg)
 
 
-def main(map_type, map_size, planner, use_fluents_map):
+def main(map_type, map_size, planner, use_fluents_map, max_steps):
     if map_type == "basic":
         env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft, 3: MaskedMinecraft
     elif map_type == "advanced":
@@ -85,10 +85,16 @@ def main(map_type, map_size, planner, use_fluents_map):
         fluents_map = "planning/advanced_minecraft_fluents_map.json"
 
     if map_type == "basic":
-        env = minecraft(visually=False, start_pal=True, keep_alive=False)
+        env = minecraft(
+            visually=False, start_pal=True, keep_alive=False, max_steps=max_steps
+        )
     elif map_type == "advanced":
         env = minecraft(
-            visually=False, start_pal=True, keep_alive=False, map_size=map_size
+            visually=False,
+            start_pal=True,
+            keep_alive=False,
+            max_steps=max_steps,
+            map_size=map_size,
         )
 
     map_size = f"{map_size}X{map_size}"
@@ -121,9 +127,9 @@ def main(map_type, map_size, planner, use_fluents_map):
         file = open(f"{logdir}/results.txt", "w", encoding="utf-8")
 
         if planner == "ENHSP":
-            planner = ENHSP()
-        else:
             planner = MetricFF()
+        else:
+            planner = ENHSP()
 
         # run on 1 problem
         for start_index in [train_idx[0]]:
@@ -162,7 +168,7 @@ def main(map_type, map_size, planner, use_fluents_map):
                     valid = validator(Path(odomain), Path(problem), Path(tloc))
 
                     if valid:
-                        if len(plan) > env.max_rounds:
+                        if len(plan) > env.max_steps:
                             plan_tl += 1
                         else:
                             random_check = np.random.randint(1, 11)
@@ -232,7 +238,7 @@ def main(map_type, map_size, planner, use_fluents_map):
                     valid = validator(Path(odomain), Path(problem), Path(tloc))
 
                     if valid:
-                        if len(plan) > env.max_rounds:
+                        if len(plan) > env.max_steps:
                             plan_tl += 1
                         else:
                             random_check = np.random.randint(1, 11)
@@ -267,15 +273,19 @@ def main(map_type, map_size, planner, use_fluents_map):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 6:
+        max_steps = int(sys.argv[5])
+    else:
+        max_steps = 32
+
     if len(sys.argv) == 5:
         map_type = sys.argv[1]
         map_size = int(sys.argv[2])
         planner = sys.argv[3]
         use_fluents_map = sys.argv[4] == "True"
-        main(map_type, map_size, planner, use_fluents_map)
+        main(map_type, map_size, planner, use_fluents_map, max_steps)
     else:
         print("Please provide a variable as a command-line argument.")
         print(
-            "Example: python playground_offline.py [basic/advanced] [6/10] [ENHSP/FF] [True/False]"
+            "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] solver[FF] use_fluents_map[True/False] optional_max_steps[32*X]"
         )
-        # main("basic", 6, "ENHSP", True)

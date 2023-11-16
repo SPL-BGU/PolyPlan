@@ -16,7 +16,7 @@ class BasicMinecraft(PolycraftGymEnv):
         visually: if True, the environment will be displayed in the screen
         start_pal: if True, the pal will be started
         keep_alive: if True, the pal will be kept alive after the environment is closed
-        rounds: actions in the environment until reset
+        max_steps: actions in the environment until reset
     """
 
     def __init__(self, **kwargs):
