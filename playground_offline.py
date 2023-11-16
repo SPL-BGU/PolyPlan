@@ -186,7 +186,7 @@ def main(map_type, map_size, learning_method, fold):
                 problem_start_index : problem_start_index + chunk_size
             ]:
                 with open(
-                    f"{os.getcwd()}/dataset/{map_size}/basic_map_instance_{problem_index}.pkl",
+                    f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{problem_index}.pkl",
                     "rb",
                 ) as fp:
                     pk = pickle.load(fp)

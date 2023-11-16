@@ -24,6 +24,8 @@ I recommending to use ubuntu as an operating system or using wsl on windows. <br
 > sed -i -e 's/\r$//' setup_linux_headless.sh
 2. If you got an error while installing gym:
 > pip install setuptools==66
+3. If you still have errors while installing the gym:
+> pip install wheel==0.38.4
 
 # Usage
 

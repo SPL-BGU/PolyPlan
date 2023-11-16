@@ -110,6 +110,7 @@ def train_rl_agent(
             action_space=env.action_space,
             demonstrations=rollouts,
             custom_logger=imit_logger.configure(folder=logdir),
+            rng=SEED,
         )  # using default policy for better performance
 
         bc_trainer.train(n_epochs=timesteps)
