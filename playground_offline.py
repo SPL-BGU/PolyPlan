@@ -270,7 +270,21 @@ if __name__ == "__main__":
         map_size = int(sys.argv[2])
         learning_method = sys.argv[3]
         fold = int(sys.argv[4])
-        main(map_type, map_size, learning_method, fold, max_steps)
+
+        if (
+            map_type not in ["basic", "advanced"]
+            or map_size not in [6, 10]
+            or (map_type == "basic" and map_size != 6)
+            or learning_method not in ["BC", "DQN", "GAIL"]
+            or fold not in list(range(5))
+            or max_steps % 32 != 0
+        ):
+            print("Please provide valid command-line argument.")
+            print(
+                "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] algorithm[BC/DQN/GAIL] fold[0-4] optional_max_steps[32*X]"
+            )
+        else:
+            main(map_type, map_size, learning_method, fold, max_steps)
     else:
         print("Please provide a variable as a command-line argument.")
         print(

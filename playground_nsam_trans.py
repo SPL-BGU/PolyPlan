@@ -285,7 +285,28 @@ if __name__ == "__main__":
         map_size_to = int(sys.argv[3])
         planner = sys.argv[4]
         use_fluents_map = sys.argv[5] == "True"
-        main(map_type, map_size_from, map_size_to, planner, use_fluents_map, max_steps)
+
+        if (
+            map_type not in ["basic", "advanced"]
+            or map_size_from >= map_size_to
+            or map_size_from not in [6]
+            or map_size_to not in [10]
+            or planner not in ["FF"]
+            or max_steps % 32 != 0
+        ):
+            print("Please provide valid command-line argument.")
+            print(
+                "Example: python playground_offline.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] optional_max_steps[32*X]"
+            )
+        else:
+            main(
+                map_type,
+                map_size_from,
+                map_size_to,
+                planner,
+                use_fluents_map,
+                max_steps,
+            )
     else:
         print("Please provide a variable as a command-line argument.")
         print(
