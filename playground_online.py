@@ -85,8 +85,8 @@ def main(map_type, map_size, learning_method, fold, max_steps):
     timesteps = 128 * chunk_size
 
     j = -1
-    df = pd.read_csv(f"{os.getcwd()}/kfolds.csv")
-    for index, row in df.iterrows():
+    df = pd.read_csv("kfolds.csv")
+    for _, row in df.iterrows():
         # skip to the fold
         j += 1
         if j < fold:
@@ -98,19 +98,8 @@ def main(map_type, map_size, learning_method, fold, max_steps):
         output_directory_path = f"{os.getcwd()}/dataset/{map_size}"
 
         # make log directory
-        logdir = f"logs/{learning_method}"
-        dir_index = 1
-        while os.path.exists(f"{logdir}/{dir_index}") and len(
-            os.listdir(f"{logdir}/{dir_index}")
-        ):
-            dir_index += 1
-        logdir = f"{logdir}/{dir_index}"
-        if not os.path.exists(logdir):
-            os.makedirs(logdir)
-
-        models_dir = f"models/{learning_method}/{dir_index}"
-        if not os.path.exists(models_dir):
-            os.makedirs(models_dir)
+        postfix = f"{learning_method}/{map_type}_{map_size}/fold_{fold}"
+        logdir, models_dir = Logger.create_logdir(postfix)
 
         rec_dir = f"{logdir}/solutions"
         if not os.path.exists(rec_dir):
@@ -168,10 +157,10 @@ def main(map_type, map_size, learning_method, fold, max_steps):
             t2 = time.time()
             print(f"Time to evaluate: {t2 - t1}")
             file.write(f"{avg}\n")
-            # break
 
         file.close()
         break
+    env.close()
 
 
 if __name__ == "__main__":

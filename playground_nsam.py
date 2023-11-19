@@ -17,6 +17,7 @@ from agents import FixedScriptAgent
 
 from planning import validator
 
+from utils import Logger
 
 import numpy as np
 import pandas as pd
@@ -58,7 +59,7 @@ def evaluate(env, plan, test_set, map_size):
     return sum(avg) / len(avg)
 
 
-def main(map_type, map_size, planner, use_fluents_map, max_steps):
+def main(map_type, map_size, planner, use_fluents_map, fold, max_steps):
     if map_type == "basic":
         env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft, 3: MaskedMinecraft
     elif map_type == "advanced":
@@ -101,28 +102,20 @@ def main(map_type, map_size, planner, use_fluents_map, max_steps):
     chunk_size = 160
     timeout = 5
 
+    j = -1
     df = pd.read_csv("kfolds.csv")
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
+        # skip to the fold
+        j += 1
+        if j < fold:
+            continue
+
         train_idx = eval(row["train_idx"])
         val_idx = eval(row["val_idx"])
 
-        exploring_sam = ExploringSam(
-            env,
-            domain=p_domain,
-            problem=p_problem,
-            fluents_map=fluents_map,
-            save_interval=1,
-            output_dir="solutions",
-        )
-        logdir = f"logs/exploring_sam"
-        dir_index = 1
-        while os.path.exists(f"{logdir}/{dir_index}") and len(
-            os.listdir(f"{logdir}/{dir_index}")
-        ):
-            dir_index += 1
-        logdir = f"{logdir}/{dir_index}"
-        if not os.path.exists(logdir):
-            os.makedirs(logdir)
+        # make log directory
+        postfix = f"exploring_sam/{map_type}_{map_size}/fold_{fold}"
+        logdir, models_dir = Logger.create_logdir(postfix)
 
         file = open(f"{logdir}/results.txt", "w", encoding="utf-8")
 
@@ -131,15 +124,24 @@ def main(map_type, map_size, planner, use_fluents_map, max_steps):
         else:
             planner = ENHSP()
 
+        exploring_sam = ExploringSam(
+            env,
+            domain=p_domain,
+            problem=p_problem,
+            fluents_map=fluents_map,
+            save_interval=1,
+            output_dir=models_dir,
+        )
+
         # run on 1 problem
         for start_index in [train_idx[0]]:
             shutil.copy(
                 f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{start_index}.pddl",
-                f"{os.getcwd()}/solutions/{map_type}_map_instance_{start_index}.pddl",
+                f"{os.getcwd()}/{models_dir}/{map_type}_map_instance_{start_index}.pddl",
             )
             shutil.copy(
                 f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{start_index}.solution",
-                f"{os.getcwd()}/solutions/{map_type}_map_instance_{start_index}.solution",
+                f"{os.getcwd()}/{models_dir}/{map_type}_map_instance_{start_index}.solution",
             )
 
             exploring_sam.active_nsam(
@@ -154,14 +156,14 @@ def main(map_type, map_size, planner, use_fluents_map, max_steps):
             plan_tl = 0
 
             for problem_index in val_idx:
-                domain = f"{os.getcwd()}/solutions/domain1.pddl"
+                domain = f"{os.getcwd()}/{models_dir}/domain1.pddl"
                 problem = f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{problem_index}.pddl"
 
                 plan = planner.create_plan(domain, problem, timeout=timeout)
 
                 if len(plan) != 0:
-                    tloc = os.getcwd() + "/solutions/temp_plan.txt"
-                    odomain = os.getcwd() + "/solutions/domain.pddl"
+                    tloc = f"{os.getcwd()}/{models_dir}/temp_plan.txt"
+                    odomain = f"{os.getcwd()}/{models_dir}/domain.pddl"
                     with open(tloc, "w") as tfile:
                         tfile.write("\n".join(plan))
 
@@ -200,11 +202,11 @@ def main(map_type, map_size, planner, use_fluents_map, max_steps):
             ]:
                 shutil.copy(
                     f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{problem_index}.pddl",
-                    f"{os.getcwd()}/solutions/{map_type}_map_instance_{problem_index}.pddl",
+                    f"{os.getcwd()}/{models_dir}/{map_type}_map_instance_{problem_index}.pddl",
                 )
                 shutil.copy(
                     f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{problem_index}.solution",
-                    f"{os.getcwd()}/solutions/{map_type}_map_instance_{problem_index}.solution",
+                    f"{os.getcwd()}/{models_dir}/{map_type}_map_instance_{problem_index}.solution",
                 )
 
             exploring_sam.active_nsam(
@@ -219,19 +221,14 @@ def main(map_type, map_size, planner, use_fluents_map, max_steps):
             plan_tl = 0
 
             for problem_index in val_idx:
-                domain = f"{os.getcwd()}/solutions/domain{problem_start_index + chunk_size}.pddl"
-                # domain = f"/solutions/domain900.pddl"
+                domain = f"{os.getcwd()}/{models_dir}/domain{problem_start_index + chunk_size}.pddl"
                 problem = f"{os.getcwd()}/dataset/{map_size}/{map_type}_map_instance_{problem_index}.pddl"
 
-                # for solver in [MetricFF]:
-                # planner = solver()
                 plan = planner.create_plan(domain, problem, timeout=timeout)
-                # if len(plan) > 0:
-                #     break
 
                 if len(plan) != 0:
-                    tloc = os.getcwd() + "/solutions/temp_plan.txt"
-                    odomain = os.getcwd() + "/solutions/domain.pddl"
+                    tloc = f"{os.getcwd()}/{models_dir}/temp_plan.txt"
+                    odomain = f"{os.getcwd()}/{models_dir}/domain.pddl"
                     with open(tloc, "w") as tfile:
                         tfile.write("\n".join(plan))
 
@@ -265,40 +262,49 @@ def main(map_type, map_size, planner, use_fluents_map, max_steps):
 
         file.close()
 
-        os.rename(
-            "/home/benjamin/Projects/PolyPlan/solutions",
-            f"/home/benjamin/Projects/PolyPlan/solutions{dir_index}",
-        )
-        os.makedirs("/home/benjamin/Projects/PolyPlan/solutions")
+        # clean models directory
+        files_to_keep = ["domain1.pddl"] + [
+            f"domain{i}.pddl" for i in range(chunk_size, 801, chunk_size)
+        ]
+
+        for filename in os.listdir(models_dir):
+            file_path = os.path.join(models_dir, filename)
+            if filename not in files_to_keep:
+                os.remove(file_path)
+
+        break
+    env.close()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 6:
-        max_steps = int(sys.argv[5])
+    if len(sys.argv) == 7:
+        max_steps = int(sys.argv[6])
     else:
         max_steps = 32
 
-    if len(sys.argv) == 5:
+    if len(sys.argv) == 6:
         map_type = sys.argv[1]
         map_size = int(sys.argv[2])
         planner = sys.argv[3]
         use_fluents_map = sys.argv[4] == "True"
+        fold = int(sys.argv[5])
 
         if (
             map_type not in ["basic", "advanced"]
             or map_size not in [6, 10]
             or (map_type == "basic" and map_size != 6)
             or planner not in ["FF"]
+            or fold not in list(range(5))
             or max_steps % 32 != 0
         ):
             print("Please provide valid command-line argument.")
             print(
-                "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] solver[FF] use_fluents_map[True/False] optional_max_steps[32*X]"
+                "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] solver[FF] use_fluents_map[True/False] fold[0-4] optional_max_steps[32*X]"
             )
         else:
-            main(map_type, map_size, planner, use_fluents_map, max_steps)
+            main(map_type, map_size, planner, use_fluents_map, fold, max_steps)
     else:
         print("Please provide a variable as a command-line argument.")
         print(
-            "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] solver[FF] use_fluents_map[True/False] optional_max_steps[32*X]"
+            "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] solver[FF] use_fluents_map[True/False] fold[0-4] optional_max_steps[32*X]"
         )

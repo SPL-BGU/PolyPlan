@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from typing import Tuple
 from gym import Wrapper
 from gym.wrappers import RecordEpisodeStatistics
 from stable_baselines3.common.monitor import Monitor
@@ -113,3 +114,25 @@ class RecordTrajectories(BaseCallback):
 
     # def _on_training_end(self) -> None:
     #     os.remove(f"{self.output_dir}/pfile{self.episodes}.trajectory")
+
+
+def create_logdir(postfix, indexing=False) -> Tuple[str, str]:
+    logdir = f"logs/{postfix}"
+    models_dir = f"models/{postfix}"
+
+    if indexing:
+        dir_index = 1
+        while os.path.exists(f"{logdir}/{dir_index}") and len(
+            os.listdir(f"{logdir}/{dir_index}")
+        ):
+            dir_index += 1
+        logdir = f"{logdir}/{dir_index}"
+        models_dir = f"{models_dir}/{dir_index}"
+
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+
+    return logdir, models_dir
