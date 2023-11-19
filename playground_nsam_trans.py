@@ -61,7 +61,14 @@ def evaluate(env, plan, test_set, map_size):
 
 
 def main(
-    map_type, map_size_from, map_size_to, planner, use_fluents_map, fold, max_steps
+    map_type,
+    map_size_from,
+    map_size_to,
+    planner,
+    use_fluents_map,
+    fold,
+    timeout,
+    max_steps,
 ):
     if map_type == "basic":
         env_index = 0  # 0: BasicMinecraft, 1: IntermediateMinecraft, 2: AdvancedMinecraft, 3: MaskedMinecraft
@@ -104,7 +111,6 @@ def main(
     map_size_to = f"{map_size_to}X{map_size_to}"
     map_size_from = f"{map_size_from}X{map_size_from}"
     chunk_size = 160
-    timeout = 5
 
     j = -1
     df = pd.read_csv("kfolds.csv")
@@ -118,9 +124,7 @@ def main(
         val_idx = eval(row["val_idx"])
 
         # make log directory
-        postfix = (
-            f"exploring_sam/{map_type}_{map_size_from}_to_{map_size_to}/fold_{fold}"
-        )
+        postfix = f"exploring_sam/{map_type}_{map_size_from}_to_{map_size_to}/fluents_map_{use_fluents_map}/timeout_{timeout}/fold_{fold}"
         logdir, models_dir = Logger.create_logdir(postfix)
 
         file = open(f"{logdir}/results.txt", "w", encoding="utf-8")
@@ -283,18 +287,19 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 8:
-        max_steps = int(sys.argv[7])
+    if len(sys.argv) == 9:
+        max_steps = int(sys.argv[8])
     else:
         max_steps = 32
 
-    if len(sys.argv) == 7:
+    if len(sys.argv) == 8:
         map_type = sys.argv[1]
         map_size_from = int(sys.argv[2])
         map_size_to = int(sys.argv[3])
         planner = sys.argv[4]
         use_fluents_map = sys.argv[5] == "True"
         fold = int(sys.argv[6])
+        timeout = int(sys.argv[7])
 
         if (
             map_type not in ["basic", "advanced"]
@@ -307,7 +312,7 @@ if __name__ == "__main__":
         ):
             print("Please provide valid command-line argument.")
             print(
-                "Example: python playground_offline.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] fold[0-4] optional_max_steps[32*X]"
+                "Example: python playground_nsam_trans.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] fold[0-4] time_out[seconds] optional_max_steps[32*X]"
             )
         else:
             main(
@@ -317,10 +322,11 @@ if __name__ == "__main__":
                 planner,
                 use_fluents_map,
                 fold,
+                timeout,
                 max_steps,
             )
     else:
         print("Please provide a variable as a command-line argument.")
         print(
-            "Example: python playground_offline.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] fold[0-4] optional_max_steps[32*X]"
+            "Example: python playground_nsam_trans.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] fold[0-4] time_out[seconds] optional_max_steps[32*X]"
         )
