@@ -205,6 +205,9 @@ def get_raw_data(map_path: str) -> dict:
 
 
 if __name__ == "__main__":
+    env = BasicMinecraft(visually=False, start_pal=True, keep_alive=True)
+    env.close()
+
     solve_counting = False
     map_size = 6
     num_maps_to_generate = 1000
@@ -239,8 +242,8 @@ if __name__ == "__main__":
     map_name = f"{map_size}X{map_size}"
 
     # generate RL solutions for counting map
+    env = BasicMinecraft(visually=False, start_pal=False, keep_alive=True)
     if solve_counting:
-        env = BasicMinecraft(visually=False, start_pal=False, keep_alive=True)
         for i in tqdm(range(num_maps_to_generate)):  # time taken: 3h
             domain_path = f"dataset/{map_name}/map_instance_{i}.json"
             env.set_domain(domain_path)
@@ -254,11 +257,11 @@ if __name__ == "__main__":
             sol = f"dataset/{map_name}/basic_map_instance_{i}.pkl"
             learning_agent.record_trajectory()
             learning_agent.export_trajectory(sol)
-        env.close()
+    env.close()
 
     # generate RL solutions for advanced map
     env = AdvancedMinecraft(
-        visually=False, start_pal=False, keep_alive=True, map_size=map_size
+        visually=False, start_pal=False, keep_alive=False, map_size=map_size
     )
     for i in tqdm(range(num_maps_to_generate)):  # time taken: 3h
         domain_path = f"dataset/{map_name}/map_instance_{i}.json"

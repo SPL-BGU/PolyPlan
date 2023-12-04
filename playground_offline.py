@@ -56,7 +56,7 @@ def evaluate(env, model, test_set, id, map_size):
             env=env,
             n_eval_episodes=1,
             return_episode_rewards=True,
-            deterministic=True,
+            deterministic=False,
         )
         avg.append(sum(rewards) / len(rewards))
 
@@ -140,6 +140,12 @@ def main(map_type, map_size, learning_method, fold, max_steps):
                 seed=SEED,
             )
 
+            replay_buffer = ReplayBuffer(
+                buffer_size=2048,
+                observation_space=env.observation_space,
+                action_space=env.action_space,
+            )
+
         elif learning_method == "GAIL":
             ppo_model = PPO(
                 PolycraftPPOPolicy,
@@ -199,12 +205,6 @@ def main(map_type, map_size, learning_method, fold, max_steps):
                 bc_trainer.save_policy(f"{models_dir}/{index}.zip")
                 model = bc.reconstruct_policy(f"{models_dir}/{index}.zip")
             elif learning_method == "DQN":
-                replay_buffer = ReplayBuffer(
-                    buffer_size=2048,
-                    observation_space=env.observation_space,
-                    action_space=env.action_space,
-                )
-
                 for trajectory in rollouts:
                     # unwrafted trajectory
                     obs = trajectory.obs
@@ -245,6 +245,7 @@ def main(map_type, map_size, learning_method, fold, max_steps):
             t2 = time.time()
             print(f"Time to evaluate: {t2 - t1}")
             file.write(f"{avg}\n")
+            file.flush()
 
         file.close()
         break
@@ -264,21 +265,20 @@ if __name__ == "__main__":
         fold = int(sys.argv[4])
 
         if (
-            map_type not in ["basic", "advanced"]
-            or map_size not in [6, 10]
-            or (map_type == "basic" and map_size != 6)
+            not os.path.isdir(f"{os.getcwd()}/dataset/{map_size}X{map_size}")
+            or map_type not in ["basic", "advanced"]
             or learning_method not in ["BC", "DQN", "GAIL"]
             or fold not in list(range(5))
             or max_steps % 32 != 0
         ):
             print("Please provide valid command-line argument.")
             print(
-                "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] algorithm[BC/DQN/GAIL] fold[0-4] optional_max_steps[32*X]"
+                "Example: python playground_offline.py map_type[basic/advanced] map_size[M] algorithm[BC/DQN/GAIL] fold[0-4] optional_max_steps[32*X]"
             )
         else:
             main(map_type, map_size, learning_method, fold, max_steps)
     else:
         print("Please provide a variable as a command-line argument.")
         print(
-            "Example: python playground_offline.py map_type[basic/advanced] map_size[6/10] algorithm[BC/DQN/GAIL] fold[0-4] optional_max_steps[32*X]"
+            "Example: python playground_offline.py map_type[basic/advanced] map_size[M] algorithm[BC/DQN/GAIL] fold[0-4] optional_max_steps[32*X]"
         )

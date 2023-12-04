@@ -269,6 +269,7 @@ def main(
             file.write(
                 f"solved: {total/len(val_idx)}, not valid: {unval/len(val_idx)}, timeout: {to/len(val_idx)}, plan too long: {plan_tl/len(val_idx)}, unsolvable: {unsol/len(val_idx)}\n"
             )
+            file.flush()
 
         file.close()
 
@@ -302,17 +303,17 @@ if __name__ == "__main__":
         timeout = int(sys.argv[7])
 
         if (
-            map_type not in ["basic", "advanced"]
+            not os.path.isdir(f"{os.getcwd()}/dataset/{map_size_from}X{map_size_from}")
+            or not os.path.isdir(f"{os.getcwd()}/dataset/{map_size_to}X{map_size_to}")
+            or map_type not in ["advanced"]
             or map_size_from >= map_size_to
-            or map_size_from not in [6]
-            or map_size_to not in [10]
             or planner not in ["FF"]
             or fold not in list(range(5))
             or max_steps % 32 != 0
         ):
             print("Please provide valid command-line argument.")
             print(
-                "Example: python playground_nsam_trans.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] fold[0-4] time_out[seconds] optional_max_steps[32*X]"
+                "Example: python playground_nsam_trans.py map_type[advanced] from_size[M1] to_size[M2] solver[FF] use_fluents_map[True/False] fold[0-4] time_out[seconds] optional_max_steps[32*X]"
             )
         else:
             main(
@@ -328,5 +329,5 @@ if __name__ == "__main__":
     else:
         print("Please provide a variable as a command-line argument.")
         print(
-            "Example: python playground_nsam_trans.py map_type[basic/advanced] from_size[6] to_size[10] solver[FF] use_fluents_map[True/False] fold[0-4] time_out[seconds] optional_max_steps[32*X]"
+            "Example: python playground_nsam_trans.py map_type[advanced] from_size[M1] to_size[M2] solver[FF] use_fluents_map[True/False] fold[0-4] time_out[seconds] optional_max_steps[32*X]"
         )

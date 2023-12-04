@@ -3,6 +3,9 @@ import pickle, json
 from imitation.data import rollout
 from stable_baselines3.common.vec_env import DummyVecEnv
 from imitation.data.wrappers import RolloutInfoWrapper
+import numpy as np
+
+SEED = 63
 
 
 class LearningAgent(PolycraftAgent):
@@ -32,6 +35,7 @@ class LearningAgent(PolycraftAgent):
                 lambda state: [self.choose_action(state)],
                 venv,
                 rollout.make_sample_until(min_timesteps=None, min_episodes=1),
+                np.random.default_rng(seed=SEED),
             )
         else:  # record trajectory for planning algorithms
             state = self.env.reset()
