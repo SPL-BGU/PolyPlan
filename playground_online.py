@@ -104,7 +104,6 @@ def main(map_type, map_size, learning_method, fold, max_steps):
         rec_dir = f"{logdir}/solutions"
         if not os.path.exists(rec_dir):
             os.makedirs(rec_dir)
-        callback = Logger.RecordTrajectories(output_dir=rec_dir)
 
         if learning_method == "DQN":
             model = DQN(
@@ -137,6 +136,11 @@ def main(map_type, map_size, learning_method, fold, max_steps):
         for index, problem_start_index in enumerate(
             range(0, len(train_idx), chunk_size)
         ):
+            rec_dir_index = f"{rec_dir}/{index}"
+            if not os.path.exists(rec_dir_index):
+                os.makedirs(rec_dir_index)
+            callback = Logger.RecordTrajectories(output_dir=rec_dir_index)
+
             t1 = time.time()
             for problem_index in train_idx[
                 problem_start_index : problem_start_index + chunk_size

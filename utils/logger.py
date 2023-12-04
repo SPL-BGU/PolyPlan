@@ -19,7 +19,7 @@ class RecordTrajectories(BaseCallback):
         super().__init__(verbose)
         self.episodes = 1
         self.output_dir = output_dir
-        self.file = open(f"{output_dir}/pfile1.trajectory", "w")
+        self.file = None
         self.env = None
 
     def translate(self, state):
@@ -86,6 +86,8 @@ class RecordTrajectories(BaseCallback):
             self.file.close()
             self.episodes += 1
             self.file = open(f"{self.output_dir}/pfile{self.episodes}.trajectory", "w")
+            translate = self.translate(env._state)
+            self.file.write(f"((:init {translate}\n")
         else:
             translate = self.translate(env._state)
             self.file.write(f"(:state {translate}\n")
@@ -94,11 +96,21 @@ class RecordTrajectories(BaseCallback):
 
     def _on_rollout_start(self) -> None:
         env = self.get_env()
-
+        self.file = open(f"{self.output_dir}/pfile{self.episodes}.trajectory", "w")
         translate = self.translate(env._state)
         self.file.write(f"((:init {translate}\n")
 
     def _on_rollout_end(self) -> None:
+        self.file.write(f")\n")
+        self.file.close()
+        file_path = f"{self.output_dir}/pfile{self.episodes}.trajectory"
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+            if len(lines) == 2:
+                os.remove(file_path)
+            else:
+                self.episodes += 1
+
         env = self.locals["env"].envs[0]
 
         if type(env) == Monitor:
