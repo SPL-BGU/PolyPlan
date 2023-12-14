@@ -6,6 +6,7 @@ from gym import Wrapper
 from gym.wrappers import RecordEpisodeStatistics
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
+from collections import OrderedDict
 
 
 class RecordTrajectories(BaseCallback):
@@ -21,6 +22,18 @@ class RecordTrajectories(BaseCallback):
         self.output_dir = output_dir
         self.file = None
         self.env = None
+        self.last_pos = None
+
+        # iteration index
+        self.it_index = OrderedDict()
+        self.it_index[0] = -1
+
+    def update_output_dir(self, output_dir):
+        self.episodes = 1
+        self.output_dir = output_dir
+        self.file = None
+        self.env = None
+        self.last_pos = None
 
     def translate(self, state):
         output = ""
@@ -33,6 +46,7 @@ class RecordTrajectories(BaseCallback):
                         output += "(tree_cell cell{}) ".format(i)
                     elif cell_value == 2:
                         output += "(crafting_table_cell crafting_table) "
+                        crafting_table_cell = i
             elif key == "inventory":
                 output += "(= (count_log_in_inventory ) {}) ".format(int(value[0]))
                 output += "(= (count_planks_in_inventory ) {}) ".format(int(value[1]))
@@ -46,7 +60,10 @@ class RecordTrajectories(BaseCallback):
                 if int(value[5]) > 0:
                     output += "(have_pogo_stick) "
             elif key == "position":
-                output += "(position cell{})".format(int(value[0]))
+                if int(value[0]) == crafting_table_cell:
+                    output += "(position crafting_table) "
+                else:
+                    output += "(position cell{})".format(int(value[0]))
             elif key == "treeCount":
                 output += "(= (trees_in_map ) {}) ".format(int(value[0]))
 
@@ -75,10 +92,10 @@ class RecordTrajectories(BaseCallback):
         env = self.get_env()
 
         action = self.locals["actions"][0]
-        action = env.decoder.decode_to_planning(action)
-        self.file.write(f"(operator: ({action}))\n")
 
-        if env.steps_left == env.max_steps or env.done:
+        if env.steps_left == env.max_steps:
+            action = env.decoder.decode_to_planning(action, self.last_pos)
+            self.file.write(f"(operator: ({action}))\n")
             translate = self.translate(env.last_state)
             self.file.write(f"(:state {translate}\n")
 
@@ -89,18 +106,22 @@ class RecordTrajectories(BaseCallback):
             translate = self.translate(env._state)
             self.file.write(f"((:init {translate}\n")
         else:
+            action = env.decoder.decode_to_planning(action)
+            self.file.write(f"(operator: ({action}))\n")
             translate = self.translate(env._state)
             self.file.write(f"(:state {translate}\n")
 
+        self.last_pos = env._state["position"][0]
+
         return True
 
-    def _on_rollout_start(self) -> None:
+    def _on_training_start(self) -> None:
         env = self.get_env()
         self.file = open(f"{self.output_dir}/pfile{self.episodes}.trajectory", "w")
         translate = self.translate(env._state)
         self.file.write(f"((:init {translate}\n")
 
-    def _on_rollout_end(self) -> None:
+    def _on_training_end(self) -> None:
         self.file.write(f")\n")
         self.file.close()
         file_path = f"{self.output_dir}/pfile{self.episodes}.trajectory"
@@ -120,12 +141,20 @@ class RecordTrajectories(BaseCallback):
             score = np.array(env.return_queue)
             length = np.array(env.length_queue)
 
-            results = np.array([score, length]).transpose()
-            df = pd.DataFrame(results, columns=["score", "length"])
-            df.to_csv(f"{self.output_dir}/summary.csv")
+            it_index = []
+            for key, value in self.it_index.items():
+                if value == -1:
+                    new_length = len(score) - len(it_index)
+                    it_index += [key] * new_length
+                    self.it_index[key] = new_length
+                    self.it_index[key + 1] = -1
+                else:
+                    it_index += [key] * value
+            it_index = np.array(it_index)
 
-    # def _on_training_end(self) -> None:
-    #     os.remove(f"{self.output_dir}/pfile{self.episodes}.trajectory")
+            results = np.array([score, length, it_index]).transpose()
+            df = pd.DataFrame(results, columns=["reward", "length", "iteration"])
+            df.to_csv(f"{self.output_dir}/summary_{self.episodes}.csv")
 
 
 def create_logdir(postfix, indexing=False) -> Tuple[str, str]:

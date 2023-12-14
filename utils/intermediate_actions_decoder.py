@@ -121,9 +121,10 @@ class IntermediateActionsDecoder(ActionsDecoder):
         raise ValueError(f"encode not found action '{action}'")
 
     # overriding abstract method
-    def decode_to_planning(self, action: int) -> str:
+    def decode_to_planning(self, action: int, location: int = -1) -> str:
         """Decode the gym action to planning action"""
-        location = self.agent_state["position"][0]
+        if location == -1:
+            location = self.agent_state["position"][0]
         if action < 6:
             return f"TP_TO cell{location} cell{action}"
 
