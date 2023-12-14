@@ -38,6 +38,7 @@ class Explore(BaseCallback):
         super().__init__(verbose)
         self.episodes = 0
         self.save_interval = save_interval
+        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
 
     def _on_step(self) -> bool:
         return True
@@ -92,6 +93,10 @@ class ExploringSam(PolycraftAgent):
         self.save_path = save_path
         self.save_interval = save_interval
 
+    def update_problem(self, problem: str) -> None:
+        """Update the problem file"""
+        shutil.copyfile(problem, f"{self.output_dir}/problem.pddl")
+
     def eval(self, toggle: bool = True) -> None:
         if toggle == self.eval_mode:
             return
@@ -107,6 +112,21 @@ class ExploringSam(PolycraftAgent):
             self.saved_explorer = None
 
         self.eval_mode = toggle
+
+    def update_fixed_explorer(self, use_fluents_map=False, env_is_reset=False) -> bool:
+        try:
+            plan = self.active_nsam(use_fluents_map=use_fluents_map)
+            if len(plan) == 0:
+                return False
+
+            self.explorer = FixedScriptAgent(
+                self.env,
+                script=plan,
+                env_is_reset=env_is_reset,
+            )
+            return True
+        except:
+            return False
 
     # overriding abstract method
     def choose_action(self, state=None) -> int:
@@ -165,7 +185,16 @@ class ExploringSam(PolycraftAgent):
         observation_list = []
 
         all_files = os.listdir(SOLUTIONS_PATH)
-        trajectory_files = [file for file in all_files if file.endswith(".trajectory")]
+        trajectory_files = [
+            file
+            for file in all_files
+            if file.endswith(".trajectory")
+            and os.path.getsize(SOLUTIONS_PATH / file) > 0
+        ]
+
+        if len(trajectory_files) == 0:
+            self.error_flag = -1
+            return []
 
         for trajectory in trajectory_files:
             observation = TrajectoryParser(domain).parse_trajectory(
@@ -192,6 +221,8 @@ class ExploringSam(PolycraftAgent):
             if len(plan) > 0:
                 break
 
+        # TODO: add VAL
+        self.error_flag = solver.error_flag
         return plan
 
     def save_plan(self, plan):

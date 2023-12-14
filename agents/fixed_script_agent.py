@@ -5,10 +5,18 @@ class FixedScriptAgent(PolycraftAgent):
     """Agent that follows a fixed script"""
 
     def __init__(
-        self, env, filename: str = None, script: list = [], human_readable: bool = False
+        self,
+        env,
+        filename: str = None,
+        script: list = [],
+        human_readable: bool = False,
+        env_is_reset: bool = False,
     ):
         super().__init__(env)
-        env.reset()
+
+        # you must reset the env before init this agent
+        if not env_is_reset:
+            env.reset()
 
         if filename:
             file = open(filename, "r")
