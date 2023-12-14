@@ -1,5 +1,6 @@
 from typing import Dict, List
-from utils.macro_actions import MacroAction, Craft
+from utils.macro_actions import MacroAction
+from utils.macro_actions import Craft as CraftMacro
 from math import sqrt
 
 
@@ -66,6 +67,41 @@ class PlaceTreeTap(MacroAction):
             and state["blockInFront"][0] == 1
             and state["inventory"][items_decoder["polycraft:tree_tap"]] > 0
         ):
+            return self._actions[action]
+        else:
+            return ["NOP"]
+
+
+class Craft(CraftMacro):
+    def __init__(self):
+        super().__init__()
+        self.crafting_table_location = None
+
+    def meet_requirements(
+        self, action: int, state: dict = None, items_decoder: dict = None
+    ) -> str:
+        """If the action is not available in the this state, return NOP"""
+        if (
+            (action in [0, 1])
+            or (
+                action == 2
+                and state["inventory"][items_decoder["minecraft:planks"]] > 4
+                and state["inventory"][items_decoder["minecraft:stick"]] > 0
+                and state["position"] != [self.crafting_table_location]
+            )
+            or (
+                action == 3
+                and state["inventory"][items_decoder["minecraft:planks"]] > 1
+                and state["inventory"][items_decoder["minecraft:stick"]] > 3
+                and state["inventory"][
+                    items_decoder["polycraft:sack_polyisoprene_pellets"]
+                ]
+                > 0
+                and state["position"] != [self.crafting_table_location]
+            )
+        ):
+            if action in [2, 3]:
+                state["position"] = [self.crafting_table_location]
             return self._actions[action]
         else:
             return ["NOP"]

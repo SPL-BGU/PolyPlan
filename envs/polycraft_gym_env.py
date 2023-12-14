@@ -243,6 +243,7 @@ class PolycraftGymEnv(Env):
         """Sense the environment - return the state"""
 
         while True:
+            time.sleep(0.2)
             sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
 
             # sanity check - check sense_all have all the keys

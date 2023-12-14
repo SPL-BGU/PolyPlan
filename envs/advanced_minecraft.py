@@ -119,10 +119,6 @@ class AdvancedMinecraft(PolycraftGymEnv):
 
         inventory_before = self._state["inventory"].copy()
 
-        self._state["blockInFront"][0] = self.decoder.decode_block_type(
-            sense_all["blockInFront"]["name"]
-        )
-
         # update the gameMap
         gameMap = np.zeros(
             (self.map_size, self.map_size, 1),
@@ -133,7 +129,12 @@ class AdvancedMinecraft(PolycraftGymEnv):
                 gameMap[pos_x - 1][pos_z - 1][0] = self.decoder.decode_block_type(
                     sense_all["map"][f"{pos_x},{4},{pos_z}"]["name"]
                 )
-        self._state["gameMap"] = gameMap.ravel()  # flatten the map to 1D vector
+        self._state["gameMap"] = gameMap.ravel("f")  # flatten the map to 1D vector
+
+        # block in front is the type of current position
+        self._state["blockInFront"][0] = self._state["gameMap"][
+            self._state["position"][0]
+        ]
 
         # update the inventory
         inventory = np.zeros(
@@ -159,7 +160,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
         # if change[2] > 0:  # sticks
         #     reward += 0.004
         # if change[3] > 0:  # get rubber
-        #     reward += 0.1
+        #     reward += 0 # can abuse this to get infinite reward
         # if change[4] > 0:  # tree tap
         #     reward += 0.1
         if change[5] > 0:  # wooden pogo

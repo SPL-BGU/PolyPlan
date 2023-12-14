@@ -68,6 +68,7 @@ class AdvancedActionsDecoder(ActionsDecoder):
         self.crafting_table_cell = (int(crafting_table_cell[0]) - 1) + (
             (int(crafting_table_cell[2]) - 1) * map_size
         )
+        self.advanced_actions[2].crafting_table_location = self.crafting_table_cell
 
     # overriding abstract method
     def decode_action_type(self, action: int, state: Dict) -> List[str]:
@@ -128,9 +129,10 @@ class AdvancedActionsDecoder(ActionsDecoder):
         raise ValueError(f"encode not found action '{action}'")
 
     # overriding abstract method
-    def decode_to_planning(self, action: int) -> str:
+    def decode_to_planning(self, action: int, location: int = -1) -> str:
         """Decode the gym action to planning action"""
-        location = self.agent_state["position"][0]
+        if location == -1:
+            location = self.agent_state["position"][0]
         if action < self.map_size:
             if location == self.crafting_table_cell:
                 from_location = "crafting_table"
@@ -147,6 +149,9 @@ class AdvancedActionsDecoder(ActionsDecoder):
                 if j + sum(list(self.actions_size.values())[:i]) == action:
                     if action == (self.map_size + 1) or action == (self.map_size + 2):
                         return act
-                    return f"{act} cell{location}"
+                    if location == self.crafting_table_cell:
+                        return f"{act} crafting_table"
+                    else:
+                        return f"{act} cell{location}"
 
         raise ValueError(f"decode to planning not found action '{action}'")
