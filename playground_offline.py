@@ -140,12 +140,6 @@ def main(map_type, map_size, learning_method, fold, max_steps):
                 seed=SEED,
             )
 
-            replay_buffer = ReplayBuffer(
-                buffer_size=2048,
-                observation_space=env.observation_space,
-                action_space=env.action_space,
-            )
-
         elif learning_method == "GAIL":
             ppo_model = PPO(
                 PolycraftPPOPolicy,
@@ -193,8 +187,7 @@ def main(map_type, map_size, learning_method, fold, max_steps):
                     "rb",
                 ) as fp:
                     pk = pickle.load(fp)
-                    for _ in range(10):
-                        rollouts += pk
+                    rollouts += pk
 
             if learning_method == "BC":
                 bc_trainer.set_demonstrations(rollouts)
@@ -205,6 +198,12 @@ def main(map_type, map_size, learning_method, fold, max_steps):
                 bc_trainer.save_policy(f"{models_dir}/{index}.zip")
                 model = bc.reconstruct_policy(f"{models_dir}/{index}.zip")
             elif learning_method == "DQN":
+                replay_buffer = ReplayBuffer(
+                    buffer_size=len(rollouts) * 16,
+                    observation_space=env.observation_space,
+                    action_space=env.action_space,
+                )
+
                 for trajectory in rollouts:
                     # unwrafted trajectory
                     obs = trajectory.obs

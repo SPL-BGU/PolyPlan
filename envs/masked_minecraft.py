@@ -1,4 +1,4 @@
-from envs import AdvancedMinecraft
+from envs import BasicMinecraft, AdvancedMinecraft
 from agents.explore_only_legal import ExploreOnlyLegal
 
 
