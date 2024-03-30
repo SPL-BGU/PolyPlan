@@ -19,7 +19,7 @@ from observations.experiments_trajectories_creator import (
     ExperimentTrajectoriesCreator,
     SolverType,
 )
-from sam_learning.numeric_sam import NumericSAMLearner
+from sam_learning import NumericSAMLearner
 import logging
 
 os.environ["CONVEX_HULL_ERROR_PATH"] = "temp_files/ch_error.txt"
