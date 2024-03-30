@@ -24,6 +24,7 @@ class ENHSP:
         java_version = int(java_version[start_index:end_index].split(".")[0])
         if java_version < 15:
             raise Exception("Please use JAVA 15 or higher")
+        self.explored_states = -1
 
     def create_plan(
         self,

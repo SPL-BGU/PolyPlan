@@ -5,16 +5,17 @@ import os
 from pathlib import Path
 
 
-class MetricFF:
+class NYX:
     """
     Create MetricFF for polycraft
-    Where METRIC_FF_PATH must be updated in the config.py file in order to work
+    Where NYX_PATH must be updated in the config.py file in order to work
     """
 
-    def __init__(self):
-        self.path = CONFIG.METRIC_FF_PATH
+    def __init__(self, flag: str = ""):
+        self.path = CONFIG.NYX_PATH
         self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
         self.explored_states = -1
+        self.flag = flag
 
     def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
         """
@@ -37,7 +38,10 @@ class MetricFF:
 
         original_dir = os.getcwd()
         os.chdir(self.path)
-        cmd = f"./ff -o {domain} -f {problem} -s 0"
+
+        cmd = f"python3.8 nyx.py {domain} {problem}"
+        if self.flag:
+            cmd += f" {self.flag}"
 
         planner = subprocess.Popen(
             "exec " + cmd,
@@ -64,21 +68,40 @@ class MetricFF:
             self.error_flag = -1
             raise Exception(f"unknowned error for {domain} {problem}")
 
+        plan_path = os.path.dirname(problem) + "/plans/"
+        files = [
+            f
+            for f in os.listdir(plan_path)
+            if os.path.isfile(os.path.join(plan_path, f))
+        ]
+        sorted_files = sorted(files)
+        last_file = sorted_files[-1]
+        last_file_path = os.path.join(plan_path, last_file)
+
         plan = []
+
         for line in planner.stdout:
-            if "found legal plan as follows" in str(line):
+            if "explored states" in str(line):
+                str_line = str(line)
+                index = str_line.index("explored states:") + len("explored states:")
+                self.explored_states = int(str_line[index:-3])
+            if "===== Plan ======================================" in str(line):
+                line = str(planner.stdout.readline())
+                while "b'\\n'" not in line:
+                    line = str(planner.stdout.readline())
                 line = str(planner.stdout.readline())
                 while "b'\\n'" not in line:
                     try:
-                        start = line.index(":") + 2
-                        line = line[start:-3]
+                        start = line.index("\\t") + 3
+                        end = line.index("\\t[") - 1
+                        line = line[start:end]
                         plan.append(f"({line.lower()})")
                         # print(line)
                     except:
                         pass
                     line = str(planner.stdout.readline())
                 break
-            elif "unsolvable" in str(line) or "goal not fulfilled" in str(line):
+            elif "No Plan Found!" in str(line):
                 # print("Problem unsolvable")
                 self.error_flag = 1
                 break
