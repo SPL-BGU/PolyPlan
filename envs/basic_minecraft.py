@@ -4,7 +4,7 @@ from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
-from utils import MacroActionsDecoder
+from utils import ActionsDecoder, MacroActionsDecoder
 
 
 class BasicMinecraft(PolycraftGymEnv):
@@ -19,9 +19,13 @@ class BasicMinecraft(PolycraftGymEnv):
         max_steps: actions in the environment until reset
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, decoder_class: ActionsDecoder = MacroActionsDecoder, **kwargs):
+        # initialize the decoder
+        decoder = decoder_class()
+        kwargs["decoder"] = decoder
+
         # PolycraftGymEnv
-        super().__init__(**kwargs, decoder=MacroActionsDecoder())
+        super().__init__(**kwargs)
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(

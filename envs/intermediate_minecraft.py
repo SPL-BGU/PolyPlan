@@ -4,7 +4,7 @@ from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
-from utils import IntermediateActionsDecoder
+from utils import ActionsDecoder, IntermediateActionsDecoder
 from typing import Union, List
 import time
 
@@ -21,11 +21,18 @@ class IntermediateMinecraft(PolycraftGymEnv):
         max_steps: actions in the environment until reset
     """
 
-    def __init__(self, max_steps: int = 128, **kwargs):
+    def __init__(
+        self,
+        max_steps: int = 128,
+        decoder_class: ActionsDecoder = IntermediateActionsDecoder,
+        **kwargs
+    ):
+        # initialize the decoder
+        decoder = decoder_class()
+        kwargs["decoder"] = decoder
+
         # PolycraftGymEnv
-        super().__init__(
-            max_steps=max_steps, **kwargs, decoder=IntermediateActionsDecoder()
-        )
+        super().__init__(max_steps=max_steps, **kwargs)
 
         # basic minecraft environment observation space
         self._observation_space = GymDict(

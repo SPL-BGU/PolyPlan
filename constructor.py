@@ -212,10 +212,11 @@ if __name__ == "__main__":
     map_size = 6
     num_maps_to_generate = 1000
 
-    output_directory_path = f"dataset/{map_size}X{map_size}"
+    root_dir = "dataset"
+    output_directory_path = f"{root_dir}/{map_size}X{map_size}"
 
     # generate problems
-    generator = ProblemGenerator("dataset/")
+    generator = ProblemGenerator(f"{root_dir}/")
     generator.generate_problems(
         num_maps_to_generate=num_maps_to_generate, map_size=map_size, basic_only=False
     )
@@ -239,22 +240,20 @@ if __name__ == "__main__":
         if not success:
             raise Exception(f"Solution {i} not valid via simulator")
 
-    map_name = f"{map_size}X{map_size}"
-
     # generate RL solutions for counting map
     env = BasicMinecraft(visually=False, start_pal=False, keep_alive=True)
     if solve_counting:
         for i in tqdm(range(num_maps_to_generate)):  # time taken: 3h
-            domain_path = f"dataset/{map_name}/map_instance_{i}.json"
+            domain_path = f"{output_directory_path}/map_instance_{i}.json"
             env.set_domain(domain_path)
-            filename = f"dataset/{map_name}/basic_map_instance_{i}.solution"
+            filename = f"{output_directory_path}/basic_map_instance_{i}.solution"
             fixed_script_agent = FixedScriptAgent(
                 env, filename=filename, human_readable=False
             )
 
             learning_agent = LearningAgent(env, fixed_script_agent, for_planning=False)
 
-            sol = f"dataset/{map_name}/basic_map_instance_{i}.pkl"
+            sol = f"{output_directory_path}/basic_map_instance_{i}.pkl"
             learning_agent.record_trajectory()
             learning_agent.export_trajectory(sol)
     env.close()
@@ -264,16 +263,16 @@ if __name__ == "__main__":
         visually=False, start_pal=False, keep_alive=False, map_size=map_size
     )
     for i in tqdm(range(num_maps_to_generate)):  # time taken: 3h
-        domain_path = f"dataset/{map_name}/map_instance_{i}.json"
+        domain_path = f"{output_directory_path}/map_instance_{i}.json"
         env.set_domain(domain_path)
-        filename = f"dataset/{map_name}/advanced_map_instance_{i}.solution"
+        filename = f"{output_directory_path}/advanced_map_instance_{i}.solution"
         fixed_script_agent = FixedScriptAgent(
             env, filename=filename, human_readable=False
         )
 
         learning_agent = LearningAgent(env, fixed_script_agent, for_planning=False)
 
-        sol = f"dataset/{map_name}/advanced_map_instance_{i}.pkl"
+        sol = f"{output_directory_path}/advanced_map_instance_{i}.pkl"
         learning_agent.record_trajectory()
         learning_agent.export_trajectory(sol)
     env.close()

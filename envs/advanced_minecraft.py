@@ -4,7 +4,7 @@ from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
 import numpy as np
 from collections import OrderedDict
-from utils import AdvancedActionsDecoder
+from utils import ActionsDecoder, AdvancedActionsDecoder
 
 
 class AdvancedMinecraft(PolycraftGymEnv):
@@ -19,14 +19,22 @@ class AdvancedMinecraft(PolycraftGymEnv):
         max_steps: actions in the environment until reset
     """
 
-    def __init__(self, map_size=30, max_steps: int = 32, **kwargs):
+    def __init__(
+        self,
+        map_size=30,
+        max_steps: int = 32,
+        decoder_class: ActionsDecoder = AdvancedActionsDecoder,
+        **kwargs,
+    ):
+        # initialize the decoder
         map_size_square = map_size**2
+        decoder = decoder_class(map_size_square)
+        kwargs["decoder"] = decoder
 
         # PolycraftGymEnv
         super().__init__(
             max_steps=max_steps,
             **kwargs,
-            decoder=AdvancedActionsDecoder(map_size_square),
         )
 
         self.map_size = map_size
@@ -117,7 +125,7 @@ class AdvancedMinecraft(PolycraftGymEnv):
         # get the state from the Polycraft server
         sense_all = self._senses()
 
-        inventory_before = self._state["inventory"].copy()
+        # inventory_before = self._state["inventory"].copy()
 
         # update the gameMap
         gameMap = np.zeros(
@@ -148,23 +156,23 @@ class AdvancedMinecraft(PolycraftGymEnv):
             inventory[self.decoder.decode_item_type(item["item"])] = item["count"]
         self._state["inventory"] = inventory
 
-        inventory_after = self._state["inventory"].copy()
-
         # update the reward
-        reward = 0
-        change = [int(inventory_after[i]) - int(inventory_before[i]) for i in range(6)]
-        # if change[0] > 0:  # log
-        #     reward += 0.002
-        # if change[1] > 0:  # planks
-        #     reward += 0.004
-        # if change[2] > 0:  # sticks
-        #     reward += 0.004
-        # if change[3] > 0:  # get rubber
-        #     reward += 0 # can abuse this to get infinite reward
-        # if change[4] > 0:  # tree tap
-        #     reward += 0.1
-        if change[5] > 0:  # wooden pogo
-            reward += 1
+        reward = int(sense_all["goal"]["goalAchieved"])
+        # inventory_after = self._state["inventory"].copy()
+        # reward = 0
+        # change = [int(inventory_after[i]) - int(inventory_before[i]) for i in range(6)]
+        # # if change[0] > 0:  # log
+        # #     reward += 0.002
+        # # if change[1] > 0:  # planks
+        # #     reward += 0.004
+        # # if change[2] > 0:  # sticks
+        # #     reward += 0.004
+        # # if change[3] > 0:  # get rubber
+        # #     reward += 0 # can abuse this to get infinite reward
+        # # if change[4] > 0:  # tree tap
+        # #     reward += 0.1
+        # if change[5] > 0:  # wooden pogo
+        #     reward += 1
 
         # update the reward
         self.reward = reward
