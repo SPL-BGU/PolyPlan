@@ -42,7 +42,7 @@ def main(map_type, map_size, learning_method, steps_per_episode, steps_per_map):
         )
 
     map_size = f"{map_size}X{map_size}"
-    maps = 50
+    maps = 25
 
     train_idx = list(range(maps))
 

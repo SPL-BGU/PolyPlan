@@ -70,9 +70,9 @@
     (:action CRAFT_WOODEN_POGO
         :parameters ()
         :precondition (and
-            (> (count_planks_in_inventory) 1)
-            (> (count_stick_in_inventory) 3)
-            (> (count_sack_polyisoprene_pellets_in_inventory) 0)
+            (>= (count_planks_in_inventory) 2)
+            (>= (count_stick_in_inventory) 4)
+            (>= (count_sack_polyisoprene_pellets_in_inventory) 1)
         )
         :effect (and
             (decrease (count_planks_in_inventory) 2)
