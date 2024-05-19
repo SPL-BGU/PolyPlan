@@ -1,6 +1,7 @@
 <h1 align="center">Solving Minecraft Tasks via Model Learning</h2>
 <p align="center">
 <a href="https://github.com/Search-BGU/PolyPlan/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+<a href="https://www.python.org/downloads/release/python-3818/"><img alt="Python Version" src="https://img.shields.io/badge/python-3.8-blue"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
@@ -83,6 +84,28 @@ model = FixedScriptAgent(env, script=plan)
 6. To see the model learning results run the following command in a shell:
 ```
 tensorboard --logdir logs
+```
+
+## How to reproduce results in the paper
+1. Recreate the maps:
+```
+python constructor.py
+```
+2. Run the offline RL algorithms:
+```
+python playground_offline.py
+```
+3. Run the offline NSAM algorithm:
+```
+python playground_nsam.py
+```
+4. Run the online algorithms:
+```
+python playground_online.py
+```
+5. Run the Hybrid algorithm:
+```
+python playground_online_hybrid.py
 ```
 
 # Citations

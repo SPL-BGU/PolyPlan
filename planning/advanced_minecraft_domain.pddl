@@ -36,7 +36,6 @@
         :parameters (?from - cell ?to - cell)
         :precondition (and
             (position ?from)
-            (not (= ?from ?to))
         )
         :effect (and
             (not (position ?from))
@@ -83,7 +82,6 @@
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
-            (not (position crafting_table))
             (>= (count_planks_in_inventory) 5)
             (>= (count_stick_in_inventory) 1)
         )
@@ -100,7 +98,6 @@
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
-            (not (position crafting_table))
             (>= (count_planks_in_inventory) 2)
             (>= (count_stick_in_inventory) 4)
             (>= (count_sack_polyisoprene_pellets_in_inventory) 1)
