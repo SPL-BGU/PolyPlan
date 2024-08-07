@@ -7,13 +7,13 @@ import config as CONFIG
 import os
 import sys
 import json
+import time
 import shutil
 from pathlib import Path
 
 sys.path.append("planning")
 sys.path.append(CONFIG.NSAM_PATH)
-from enhsp import ENHSP
-from metric_ff import MetricFF
+from planning import MetricFF, validator
 from pddl_plus_parser.lisp_parsers import DomainParser, TrajectoryParser
 from observations.experiments_trajectories_creator import (
     ExperimentTrajectoriesCreator,
@@ -38,7 +38,9 @@ class Explore(BaseCallback):
         super().__init__(verbose)
         self.episodes = 0
         self.save_interval = save_interval
-        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
+        self.error_flag = (
+            0  # -1: error, 0: no error, 1: no solution, 2: timeout, 3: invalid plan
+        )
 
     def _on_step(self) -> bool:
         return True
@@ -81,7 +83,7 @@ class ExploringSam(PolycraftAgent):
 
         # N-SAM learner
         self.nsam = CONFIG.NSAM_PATH
-        self.solvers = [MetricFF()]
+        self.planner = MetricFF()
         self.eval_mode = False
 
         self.output_dir = Path(output_dir).absolute()
@@ -92,6 +94,8 @@ class ExploringSam(PolycraftAgent):
         # logger
         self.save_path = save_path
         self.save_interval = save_interval
+        self.error_flag = 0
+        self.time_to_plan = -1
 
     def update_problem(self, problem: str) -> None:
         """Update the problem file"""
@@ -160,7 +164,9 @@ class ExploringSam(PolycraftAgent):
             callback=callback,
         )
 
-    def active_nsam(self, parser_trajectories=False, use_fluents_map=False) -> list:
+    def active_nsam(
+        self, parser_trajectories=False, use_fluents_map=False, run_planner=True
+    ) -> list:
         """Active N-SAM to learn the action model and return the plan"""
 
         SOLUTIONS_PATH = Path(self.output_dir)
@@ -212,17 +218,39 @@ class ExploringSam(PolycraftAgent):
         with open(domain_location, "w") as f:
             f.write(learned_domain)
 
-        # run solvers
-        for solver in self.solvers:
-            plan = solver.create_plan(
-                domain=f"{str(domain_location)}",
-                problem=f"{str(SOLUTIONS_PATH / 'problem.pddl')}",
-            )
-            if len(plan) > 0:
-                break
+        # run planner
+        if not run_planner:
+            self.error_flag = 0
+            return []
 
-        # TODO: add VAL
-        self.error_flag = solver.error_flag
+        problem = f"{str(SOLUTIONS_PATH / 'problem.pddl')}"
+        domain = f"{str(domain_location)}"
+        tloc = f"{SOLUTIONS_PATH}/temp_plan.txt"
+        odomain = f"{SOLUTIONS_PATH}/domain.pddl"
+
+        for numeric_precision in [0.01, 0.1, 0.2]:
+            self.time_to_plan = time.time()
+            plan = self.planner.create_plan(
+                domain=domain,
+                problem=problem,
+                flag=f"-t {numeric_precision}",
+            )
+            self.time_to_plan = time.time() - self.time_to_plan
+
+            if len(plan) > 0:
+                # Validate the plan
+                with open(tloc, "w") as tfile:
+                    tfile.write("\n".join(plan))
+
+                valid = validator(Path(odomain), Path(problem), Path(tloc))
+                if valid:
+                    break
+                else:
+                    self.error_flag = 1
+                    plan = []
+                    break
+
+        self.error_flag = self.planner.error_flag
         return plan
 
     def save_plan(self, plan):

@@ -16,7 +16,9 @@ class MetricFF:
         self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
         self.explored_states = -1
 
-    def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
+    def create_plan(
+        self, domain: str, problem: str, timeout: int = 60, flag: str = ""
+    ) -> list:
         """
         Create a plan for the given domain and problem
         :param domain: the domain file - must be located in the planning folder
@@ -38,6 +40,9 @@ class MetricFF:
         original_dir = os.getcwd()
         os.chdir(self.path)
         cmd = f"./ff -o {domain} -f {problem} -s 0"
+
+        if flag:
+            cmd += f" {flag}"
 
         planner = subprocess.Popen(
             "exec " + cmd,
@@ -78,7 +83,14 @@ class MetricFF:
                         pass
                     line = str(planner.stdout.readline())
                 break
-            elif "unsolvable" in str(line) or "goal not fulfilled" in str(line):
+            elif any(
+                phrase in str(line)
+                for phrase in [
+                    "unsolvable",
+                    "goal not fulfilled",
+                    "No plan will solve it",
+                ]
+            ):
                 # print("Problem unsolvable")
                 self.error_flag = 1
                 break

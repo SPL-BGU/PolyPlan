@@ -11,13 +11,14 @@ class NYX:
     Where NYX_PATH must be updated in the config.py file in order to work
     """
 
-    def __init__(self, flag: str = ""):
+    def __init__(self):
         self.path = CONFIG.NYX_PATH
         self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
         self.explored_states = -1
-        self.flag = flag
 
-    def create_plan(self, domain: str, problem: str, timeout: int = 60) -> list:
+    def create_plan(
+        self, domain: str, problem: str, timeout: int = 60, flag: str = ""
+    ) -> list:
         """
         Create a plan for the given domain and problem
         :param domain: the domain file - must be located in the planning folder
@@ -40,8 +41,8 @@ class NYX:
         os.chdir(self.path)
 
         cmd = f"python3.8 nyx.py {domain} {problem}"
-        if self.flag:
-            cmd += f" {self.flag}"
+        if flag:
+            cmd += f" {flag}"
 
         planner = subprocess.Popen(
             "exec " + cmd,
@@ -67,16 +68,6 @@ class NYX:
             planner.kill()
             self.error_flag = -1
             raise Exception(f"unknowned error for {domain} {problem}")
-
-        plan_path = os.path.dirname(problem) + "/plans/"
-        files = [
-            f
-            for f in os.listdir(plan_path)
-            if os.path.isfile(os.path.join(plan_path, f))
-        ]
-        sorted_files = sorted(files)
-        last_file = sorted_files[-1]
-        last_file_path = os.path.join(plan_path, last_file)
 
         plan = []
 

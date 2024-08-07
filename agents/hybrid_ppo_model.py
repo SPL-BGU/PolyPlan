@@ -12,7 +12,8 @@ from sb3_contrib.common.maskable.buffers import (
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
 
 from sb3_contrib.ppo_mask import MaskablePPO
-import numpy as np
+
+import time
 
 
 class HybridPPO(MaskablePPO):
@@ -23,17 +24,28 @@ class HybridPPO(MaskablePPO):
     Else PPO will engage with the environment.
     """
 
-    def __init__(self, exploring_sam=None, use_fluents_map=False, **kwargs):
+    def __init__(
+        self,
+        exploring_sam=None,
+        use_fluents_map=False,
+        shortest_possible_plan=2,
+        **kwargs,
+    ):
         # MaskablePPO
         super().__init__(**kwargs)
 
         self.exploring_sam = exploring_sam
-        self.plan_exist = False
+        self.plan_exist = 0  # 0: no plan, 1: plan found, 2: plan found and executed
         self.use_fluents_map = use_fluents_map
+        self.shortest_plan = -1
+        self.to_logger = ""
+        self.shortest_possible_plan = shortest_possible_plan
 
     def update_explorer_problem(self, problem):
         self.exploring_sam.update_problem(problem)
-        self.plan_exist = False
+        self.plan_exist = 0
+        self.shortest_plan = -1
+        self.to_logger = ""
 
     def collect_rollouts(
         self,
@@ -76,46 +88,83 @@ class HybridPPO(MaskablePPO):
             )
 
         callback.on_rollout_start()
-        dones = np.array([False])
         while n_steps < n_rollout_steps:
             # Learn action model and find a plan
-            if not self.plan_exist and (dones[0] or n_steps == 0):
-                self.plan_exist = self.exploring_sam.update_fixed_explorer(
-                    use_fluents_map=self.use_fluents_map, env_is_reset=True
-                )
+            if self.exploring_sam.env.max_steps == self.exploring_sam.env.steps_left:
+                self.exploring_sam.time_to_plan = -1
+                total_nsam_time = -1
+                if self.plan_exist != 1:
+                    if 0 < self.shortest_plan <= self.shortest_possible_plan:
+                        self.plan_exist = 2
+                        self.to_logger = "didn't tried"
+                    else:
+                        total_nsam_time = time.time()
+                        self.exploring_sam.update_fixed_explorer(
+                            use_fluents_map=self.use_fluents_map, env_is_reset=True
+                        )
+                        total_nsam_time = time.time() - total_nsam_time
 
-                plan_log = f"{self.exploring_sam.output_dir}/did_plan.txt"
-                with open(plan_log, "a") as f:
-                    if self.exploring_sam.error_flag == -1:
-                        f.write(f"error\n")
-                    elif self.exploring_sam.error_flag == 0:
-                        f.write(f"plan found\n")
-                    elif self.exploring_sam.error_flag == 1:
-                        f.write(f"no solution\n")
-                    elif self.exploring_sam.error_flag == 2:
-                        f.write(f"timeout\n")
+                        if self.exploring_sam.error_flag == -1:
+                            self.to_logger = "error"
+                        elif self.exploring_sam.error_flag == 0:
+                            plan_length = self.exploring_sam.explorer.length
+                            if (
+                                self.shortest_plan == -1
+                                or plan_length < self.shortest_plan
+                            ):
+                                self.plan_exist = 1
+                                self.shortest_plan = plan_length
+                                self.to_logger = "plan found"
+                            else:
+                                self.to_logger = "plan found but not shorter"
+                        elif self.exploring_sam.error_flag == 1:
+                            self.to_logger = "no solution"
+                        elif self.exploring_sam.error_flag == 2:
+                            self.to_logger = "timeout"
+                        elif self.exploring_sam.error_flag == 3:
+                            self.to_logger = "invalid plan"
+
+                else:
+                    self.plan_exist = 2
+                    self.to_logger = "didn't tried"
+
+                planner_time_log = f"{self.exploring_sam.output_dir}/time_to_plan.txt"
+                with open(planner_time_log, "a") as f:
+                    f.write(f"{self.exploring_sam.time_to_plan}\n")
+
+                nsam_time_log = f"{self.exploring_sam.output_dir}/total_nsam_time.txt"
+                with open(nsam_time_log, "a") as f:
+                    f.write(f"{total_nsam_time}\n")
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
 
                 # If we find a plan, we execute it else we use PPO for next action
-                if self.plan_exist:
-                    action = self.exploring_sam.choose_action()  # next action
-                    action_masks = [False] * env.action_space.n
-                    action_masks[action] = True
-                    action_masks = np.array(action_masks)
-                elif use_masking:
+                if use_masking:
                     # This is the only change related to invalid action masking
                     action_masks = get_action_masks(env)
 
-                actions, values, log_probs = self.policy(
-                    obs_tensor, action_masks=action_masks
-                )
+                if self.plan_exist == 1:
+                    action = self.exploring_sam.choose_action()  # next action
+                    actions, values, log_probs = self.policy.forward_planner(
+                        obs_tensor,
+                        actions=th.tensor([action]),
+                        action_masks=action_masks,
+                    )
+                else:
+                    actions, values, log_probs = self.policy(
+                        obs_tensor, action_masks=action_masks
+                    )
 
             actions = actions.cpu().numpy()
 
             new_obs, rewards, dones, infos = env.step(actions)
+
+            if dones[0]:
+                plan_log = f"{self.exploring_sam.output_dir}/did_plan.txt"
+                with open(plan_log, "a") as f:
+                    f.write(f"{self.to_logger}\n")
 
             self.num_timesteps += env.num_envs
 
