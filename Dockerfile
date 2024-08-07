@@ -13,6 +13,7 @@ RUN apt-get install -y python3.8-distutils
 RUN curl https://bootstrap.pypa.io/get-pip.py | sudo python3.8
 
 # Required for gym library
+RUN pip install pip==23.3.2
 RUN pip install setuptools==66
 RUN pip install wheel==0.38.4
 RUN pip install protobuf==3.20.3

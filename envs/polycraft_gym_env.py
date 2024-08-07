@@ -182,22 +182,16 @@ class PolycraftGymEnv(Env):
         self.last_state = copy.deepcopy(self._state)
 
         # reset the environment
+        self.server_controller.set_timeout(60.0)
         self.server_controller.send_command(f"RESET domain {self._domain_path}")
+        self.server_controller.set_timeout()
         if self.pal_owner:
             while "game initialization completed" not in str(self._next_line):
                 self._next_line = self._check_queues()
+        self._next_line = ""
 
-        # wait until the domain is loaded
-        while True:
-            if "map" in (sense_all := self._senses()):
-                if "minecraft:crafting_table" in [
-                    tup["name"] for tup in sense_all["map"].values()
-                ]:
-                    break
-            time.sleep(0.1)
-        time.sleep(1)
         # reset the teleport according to the new domain
-        self.decoder.update_tp(sense_all)
+        self.decoder.update_tp(self._senses())
 
         # reset the state
         self.move_to_start()
@@ -243,7 +237,6 @@ class PolycraftGymEnv(Env):
         """Sense the environment - return the state"""
 
         while True:
-            time.sleep(0.2)
             sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
 
             # sanity check - check sense_all have all the keys
@@ -256,9 +249,14 @@ class PolycraftGymEnv(Env):
                     "player",
                 ]
             ):
-                time.sleep(0.1)
                 continue
-            break
+
+            if "minecraft:crafting_table" in [
+                tup["name"] for tup in sense_all["map"].values()
+            ]:
+                break
+            else:
+                continue
 
         return sense_all
 
@@ -286,9 +284,9 @@ class PolycraftGymEnv(Env):
             location = int(location)
             inventory[0][location] = self.decoder.decode_item_type(item["item"])
             inventory[1][location] = item["count"]
-        self._state[
-            "inventory"
-        ] = inventory.ravel()  # flatten the inventory to 1D vector
+        self._state["inventory"] = (
+            inventory.ravel()
+        )  # flatten the inventory to 1D vector
 
         # location in map without y (up down movement)
         self._state["pos"][0] = sense_all["player"]["pos"][0]
@@ -337,12 +335,12 @@ class PolycraftGymEnv(Env):
 
         return self.reward
 
-    def _start_pal(self):
+    def _start_pal(self, port: int = 9000):
         """Launch Minecraft Client"""
         if self._visually:
-            pal_process_cmd = "./gradlew runclient"
+            pal_process_cmd = f"PAL_AGENT_PORT={port} ./gradlew runclient"
         else:
-            pal_process_cmd = "xvfb-run -s '-screen 0 1280x1024x24' ./gradlew --no-daemon --stacktrace runclient"
+            pal_process_cmd = f"PAL_AGENT_PORT={port} xvfb-run -s '-screen 0 1280x1024x24' ./gradlew --no-daemon --stacktrace runclient"
         print(("PAL command: " + pal_process_cmd))
         pal_client_process = subprocess.Popen(
             pal_process_cmd,

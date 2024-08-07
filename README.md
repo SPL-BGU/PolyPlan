@@ -13,13 +13,13 @@ While the project has not been formally tested, it should function correctly whe
 ## Dependencies
 1. Make sure that Python 3.8 is installed and active (via [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) or conda environment).
 2. Make sure java8 is installed and active.
-3. Follow the installation of [pal (release 2.0 commit number 5e326d4)](https://github.com/StephenGss/PAL/tree/5e326d4bf9ffda156f1360b62a49a38ccefa2d43).
+3. Follow the installation of [Polycraft (PAL)](https://github.com/StephenGss/PAL/tree/ba9128bd8bd37d79a60c6e94b6670870911c0986).
 4. Navigate to the pal directory and run the following command:
 ```
 xvfb-run -s '-screen 0 1280x1024x24' ./gradlew --no-daemon --stacktrace runclient
 ```
 * This will run Polycraft independently in headless mode. Gradle will install any dependencies that the java runtime needs, and eventually a message will appear in the log output Minecraft finished loading, which signifies that Polycraft is ready to use. Exit out of the application.
-5. Follow the installation of [numeric-sam](https://github.com/Search-BGU/numeric-sam).
+5. Follow the installation of [Numeric-SAM (N-SAM)](https://github.com/Search-BGU/numeric-sam/tree/938ce5511c9bfcabf976b8f079a9b15a19baf1a1).
 6. pip install all the requirements for this project:
 ```
 python -m pip install -r requirements.txt
@@ -95,7 +95,7 @@ python constructor.py
 ```
 python playground_offline.py
 ```
-3. Run the offline NSAM algorithm:
+3. Run the offline N-SAM algorithm:
 ```
 python playground_nsam.py
 ```

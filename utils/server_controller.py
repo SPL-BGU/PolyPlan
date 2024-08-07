@@ -1,4 +1,5 @@
 import json
+import time
 import socket
 from typing import Dict
 
@@ -25,32 +26,39 @@ class ServerController:
 
     def send_command(self, command: str) -> Dict:
         """Send a command to the Polycraft server and return the response."""
-
-        if "\n" not in command:
-            command += "\n"
-        try:
-            self.sock.send(str.encode(command))
-        except BrokenPipeError:
-            raise ConnectionError("Not connected to the Polycraft server.")
-        # print(command)
-        BUFF_SIZE = 4096  # 4 KiB
-        data = b""
-        while True:  # read the response
+        sleep_time = 0.025
+        attempt_result = 0
+        while attempt_result != 10:
+            attempt_result += 1
+            if "\n" not in command:
+                command += "\n"
             try:
-                part = self.sock.recv(BUFF_SIZE)
-                data += part
-                if len(part) < BUFF_SIZE:
-                    # either 0 or end of data
+                self.sock.send(str.encode(command))
+                time.sleep(sleep_time)
+                # sleep_time = min(1, sleep_time * 1.5)
+                sleep_time = sleep_time * 1.5
+            except BrokenPipeError:
+                raise ConnectionError("Not connected to the Polycraft server.")
+            # print(command)
+            BUFF_SIZE = 4096  # 4 KiB
+            data = b""
+            while True:  # read the response
+                try:
+                    part = self.sock.recv(BUFF_SIZE)
+                    data += part
+                    if len(part) < BUFF_SIZE:
+                        # either 0 or end of data
+                        break
+                except socket.timeout:
                     break
-            except socket.timeout:
-                break
-        if not data:  # RESET command returns no data
-            data_dict = {}
-        else:
-            try:
-                data_dict = json.loads(data)
-            except:
-                data_dict = {}
+            if data:
+                try:
+                    data_dict = json.loads(data)
+                    # if data_dict["command_result"]["result"] == "SUCCESS":
+                    #     break
+                    break
+                except:
+                    pass
         # print(data_dict)
         return data_dict
 
