@@ -86,6 +86,9 @@ class ExploringSam(PolycraftAgent):
         self.planner = MetricFF()
         self.eval_mode = False
 
+        self.observation_list = []
+        self.observation_count = 0
+
         self.output_dir = Path(output_dir).absolute()
         shutil.copyfile(domain, f"{output_dir}/domain.pddl")
         shutil.copyfile(problem, f"{output_dir}/problem.pddl")
@@ -188,8 +191,6 @@ class ExploringSam(PolycraftAgent):
             with open(SOLUTIONS_PATH / "fluents_map.json", "rt") as json_file:
                 fluents_map = json.load(json_file)
 
-        observation_list = []
-
         all_files = os.listdir(SOLUTIONS_PATH)
         trajectory_files = [
             file
@@ -202,17 +203,18 @@ class ExploringSam(PolycraftAgent):
             self.error_flag = -1
             return []
 
-        for trajectory in trajectory_files:
+        for trajectory in trajectory_files[self.observation_count :]:
             observation = TrajectoryParser(domain).parse_trajectory(
                 SOLUTIONS_PATH / f"{trajectory}"
             )
-            observation_list.append(observation)
+            self.observation_list.append(observation)
+        self.observation_count = len(trajectory_files)
 
         if use_fluents_map:
             numeric_sam = NumericSAMLearner(domain, fluents_map)
         else:
             numeric_sam = NumericSAMLearner(domain)
-        learned_model, _ = numeric_sam.learn_action_model(observation_list)
+        learned_model, _ = numeric_sam.learn_action_model(self.observation_list)
         learned_domain = learned_model.to_pddl()
         domain_location = SOLUTIONS_PATH / f"domain{len(trajectory_files)}.pddl"
         with open(domain_location, "w") as f:
