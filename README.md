@@ -112,10 +112,10 @@ python playground_online_hybrid.py
 
 If you find our work interesting or the repo useful, please consider citing [this paper](https://openreview.net/forum?id=UNNYk2Kswa):
 ```
-@inproceedings{benyamin2023model,
-  title={Model Learning to Solve Minecraft Tasks},
-  author={Benyamin, Yarin and Mordoch, Argaman and Shperberg, Shahaf S and Stern, Roni},
+@article{benyaminsolving,
+  title={Solving Minecraft Tasks via Model Learning},
+  author={Benyamin, Yarin and Mordoch, Argaman and Shperberg, Shahaf and Stern, Roni},
   booktitle={PRL Workshop Series - Bridging the Gap Between AI Planning and Reinforcement Learning},
-  year={2023}
+  year={2024}
 }
 ```
