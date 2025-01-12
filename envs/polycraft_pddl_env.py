@@ -2,16 +2,23 @@ from gym import Env
 from gym.spaces import Box, MultiDiscrete
 from gym.spaces import Dict as GymDict
 from gym.spaces import flatten_space, flatten
-import sys, time, queue, subprocess, threading
 import numpy as np
 from collections import OrderedDict
-from utils import ServerController
 from utils import ActionsDecoder, SingleActionDecoder
 import config as CONFIG
 from typing import Union, List
 from pathlib import Path
 import copy
 import os
+
+from math import sqrt
+
+from pddl_plus_parser.lisp_parsers import DomainParser, ProblemParser, TrajectoryParser
+from pddl_plus_parser.models import State
+
+from pddl_plus_parser.exporters.numeric_trajectory_exporter import TrajectoryExporter
+
+from pddl_plus_parser.lisp_parsers.pddl_tokenizer import PDDLTokenizer
 
 
 class PolycraftGymEnv(Env):
@@ -35,43 +42,12 @@ class PolycraftGymEnv(Env):
         decoder: ActionsDecoder = SingleActionDecoder(),
         debug_pal: bool = False,
     ):
-        # start polycraft server
-        self._q = queue.Queue()
-
-        port = 9000
-        self.pal_client_process = None
-        self.pal_client_thread = None
 
         self._pal_path = CONFIG.PAL_PATH
         self._visually = visually
-
-        error_messages = [
-            "FAILURE: Build failed with an exception",
-            "xvfb-run: error: Xvfb failed to start",
-            "API FAILED TO START WITH PORT: 9000",
-        ]
-
         self._next_line = ""
-        if start_pal:
-            self._start_pal(port=port)  # time to start pal is 35 seconds
-            while "Minecraft finished loading" not in str(self._next_line):
-                self._next_line = self._check_queues(debug_pal)
-                if any(msg in str(self._next_line) for msg in error_messages):
-                    raise Exception
-
         self.pal_owner = start_pal
         self._keep_alive = keep_alive
-
-        # init socket connection to polycraft
-        self.server_controller = ServerController()
-        self.server_controller.open_connection(port=port)
-
-        if start_pal:
-            self.server_controller.set_timeout(60.0)
-            self.server_controller.send_command(
-                "START"
-            )  # time to reset the environment is 10 seconds
-            self.server_controller.set_timeout()
 
         self._domain_path = CONFIG.DEFUALT_DOMAIN_PATH
 
@@ -159,19 +135,24 @@ class PolycraftGymEnv(Env):
         self.steps_left = max_steps
 
     def decode_action_type(self, action: int) -> List[str]:
-        return self.decoder.decode_action_type(action, self._state)
+        return self.decoder.decode_to_planning(action)
 
     def step(self, action: int) -> tuple:
         info = {}
         self.steps_left -= 1
 
-        command_list = self.decode_action_type(action)
-        self.action = command_list
+        if self.decoder.decode_action_type(action, self._state)[0] != "NOP":
 
-        for command in command_list:
-            self.server_controller.send_command(command)
+            self.action = self.decode_action_type(action)
 
-        self._sense_all()  # update the state and get reward
+            triplet = self.exp.create_single_triplet(
+                self.previous_state,
+                f"({self.action})",
+                self.problem.objects,
+            )
+            self.previous_state = triplet.next_state
+
+            self._sense_all()
 
         # uncomment to check if action is valid
         # info["success"] = any(
@@ -194,15 +175,14 @@ class PolycraftGymEnv(Env):
     def reset(self) -> np.ndarray:
         # save the last state
         self.last_state = copy.deepcopy(self._state)
+        # self.state = self.state.fill(0)
 
         # reset the environment
-        self.server_controller.set_timeout(60.0)
-        self.server_controller.send_command(f"RESET domain {self._domain_path}")
-        self.server_controller.set_timeout()
-        if self.pal_owner:
-            while "game initialization completed" not in str(self._next_line):
-                self._next_line = self._check_queues()
-        self._next_line = ""
+        self.previous_state = State(
+            predicates=self.problem.initial_state_predicates,
+            fluents=self.problem.initial_state_fluents,
+            is_init=True,
+        )
 
         # reset the teleport according to the new domain
         self.decoder.update_tp(self._senses())
@@ -230,13 +210,6 @@ class PolycraftGymEnv(Env):
             "============================================================================="
         )
 
-    def close(self) -> None:
-        """Close the environment"""
-        if not self._keep_alive:
-            self.server_controller.send_command("RESET")
-        self.server_controller.close_connection()
-        return super().close()
-
     def set_domain(self, path: str) -> None:
         # path must be absolute
         path = str(Path(path).absolute())
@@ -247,32 +220,59 @@ class PolycraftGymEnv(Env):
 
         self._domain_path = path
 
+        # Split the original string
+        parts = path.split("/")
+        filename = parts[-1].split("_")  # Split by underscore
+        filename[0] = "advanced_map"  # Replace 'map' with 'advanced_map'
+        lst = filename[-1].split(".")  # Replace 'json' with 'pddl'
+        filename[-1] = lst[0] + ".pddl"
+        new_filename = "_".join(filename)
+
+        domain_file_path = str(
+            Path("planning/advanced_minecraft_domain.pddl").absolute()
+        )
+        domain = DomainParser(domain_file_path).parse_domain()
+        problem_file_path = "/".join(parts[:-1]) + "/" + new_filename
+        self.problem = ProblemParser(
+            problem_path=problem_file_path, domain=domain
+        ).parse_problem()
+
+        self.exp = TrajectoryExporter(domain)
+        self.parser = TrajectoryParser(domain)
+
     def _senses(self) -> dict:
         """Sense the environment - return the state"""
 
-        while True:
-            sense_all = self.server_controller.send_command("SENSE_ALL NONAV")
+        def serialize_numeric_fluents(previous_state) -> str:
+            """Serialize the numeric fluents of the state.
 
-            # sanity check - check sense_all have all the keys
-            if not all(
-                item in sense_all
-                for item in [
-                    "blockInFront",
-                    "inventory",
-                    "map",
-                    "player",
-                ]
-            ):
-                continue
+            :return: the string representing the assigned grounded fluents.
+            """
+            return "\n".join(
+                fluent.state_representation
+                for fluent in previous_state.state_fluents.values()
+            )
 
-            if "minecraft:crafting_table" in [
-                tup["name"] for tup in sense_all["map"].values()
-            ]:
-                break
-            else:
-                continue
+        def serialize_predicates(previous_state) -> str:
+            """Serialize the predicates the constitute the state's facts.
 
-        return sense_all
+            :return: the string representation of the state's facts.
+            """
+            predicates_str = ""
+            for grounded_predicates in previous_state.state_predicates.values():
+                predicates_str += "\n"
+                predicates_str += " ".join(
+                    predicate.untyped_representation
+                    for predicate in grounded_predicates
+                )
+
+            return predicates_str
+
+        serialize = serialize_numeric_fluents(
+            self.previous_state
+        ) + serialize_predicates(self.previous_state)
+        return self.reverse_translate(serialize.split("\n"))
+        # return self.reverse_translate(self.previous_state.serialize())
 
     def _sense_all(self) -> None:
         """Sense the environment - update the state and get reward"""
@@ -349,79 +349,93 @@ class PolycraftGymEnv(Env):
 
         return self.reward
 
-    def _start_pal(self, port: int = 9000):
-        """Launch Minecraft Client"""
-        if self._visually:
-            pal_process_cmd = f"PAL_AGENT_PORT={port} ./gradlew runclient"
-        else:
-            pal_process_cmd = f"PAL_AGENT_PORT={port} xvfb-run -s '-screen 0 1280x1024x24' ./gradlew --no-daemon --stacktrace runclient"
-        print(("PAL command: " + pal_process_cmd))
-        self.pal_client_process = subprocess.Popen(
-            pal_process_cmd,
-            shell=True,
-            cwd=self._pal_path,
-            stdout=subprocess.PIPE,
-            # stdin=subprocess.PIPE,  # DN: 0606 Removed for perforamnce
-            stderr=subprocess.STDOUT,  # DN: 0606 - pipe stderr to STDOUT. added for performance
-            bufsize=1,  # DN: 0606 Added for buffer issues
-            universal_newlines=True,  # DN: 0606 Added for performance - needed for bufsize=1 based on docs?
+    def reverse_translate(self, pddl_list):
+        state = {}
+        game_map = []
+        inventory = {5: {"item": "polycraft:wooden_pogo_stick", "count": 0}}
+        position = None
+        tree_count = 0
+        goalAchieved = False
+
+        crafting_table_cell = None
+        get_int = lambda x: int(float(x.split()[-1][:-1]))
+        for line in pddl_list:
+            line = line.strip()
+            if line.startswith("(= (count_log_in_inventory"):
+                inventory[0] = {"item": "minecraft:log", "count": get_int(line)}
+            elif line.startswith("(= (count_planks_in_inventory"):
+                inventory[1] = {"item": "minecraft:planks", "count": get_int(line)}
+            elif line.startswith("(= (count_stick_in_inventory"):
+                inventory[2] = {"item": "minecraft:stick", "count": get_int(line)}
+            elif line.startswith("(= (count_sack_polyisoprene_pellets_in_inventory"):
+                inventory[3] = {
+                    "item": "polycraft:sack_polyisoprene_pellets",
+                    "count": get_int(line),
+                }
+            elif line.startswith("(= (count_tree_tap_in_inventory"):
+                inventory[4] = {"item": "polycraft:tree_tap", "count": get_int(line)}
+            elif "have_pogo_stick" in line:
+                inventory[5]["count"] = 1
+                goalAchieved = True
+            elif line.startswith("(position"):
+                position_string = line[len("(position") :].strip()
+                if position_string.startswith("cell"):
+                    position = int(position_string[len("cell") :].strip()[:-1])
+                else:
+                    position = "crafting_table"
+            elif (
+                line.startswith("(air_cell")
+                or line.startswith("(tree_cell")
+                or line.startswith("(crafting_table_cell")
+            ):
+                cells = line.split(") ")
+                for cell in cells:
+                    if cell[-1] == ")":
+                        cell = cell[:-1]
+                    if cell:
+                        if cell.startswith("(air_cell cell"):
+                            cell_num = int(cell[len("(air_cell cell") :].strip())
+                            game_map.append((cell_num, 0))
+                        elif cell.startswith("(tree_cell cell"):
+                            cell_num = int(cell[len("(tree_cell cell") :].strip())
+                            game_map.append((cell_num, 1))
+
+        # Compute tree_count from the number of tree cells in game_map
+        tree_count = sum(1 for _, value in game_map if value == 1)
+
+        state["map"] = dict(game_map)
+        cal_max = max(state["map"].keys())
+        grid_size = sqrt(cal_max + 1)
+        crafting_table_cell = cal_max * (cal_max + 1) / 2 - sum(state["map"].keys())
+        if position == "crafting_table":
+            position = crafting_table_cell
+        game_map.append((crafting_table_cell, 2))
+
+        state["map"] = dict(
+            [
+                (f"{int(number % grid_size)+1},4,{int(number // grid_size)+1}", value)
+                for number, value in game_map
+            ]
         )
-        self.pal_client_thread = threading.Thread(
-            target=PolycraftGymEnv._read_output, args=(self.pal_client_process, self._q)
-        )
-        self.pal_client_thread.daemon = True
-        self.pal_client_thread.start()  # Kickoff the PAL Minecraft Client
-        print("PAL Client Initiated")
 
-    def _read_output(pipe, q):
-        """
-        This is run on a separate daemon thread for both PAL and the AI Agent.
+        for key, value in state["map"].items():
+            if value == 0:
+                state["map"][key] = {"name": "minecraft:air"}
+            elif value == 1:
+                state["map"][key] = {"name": "minecraft:log"}
+            elif value == 2:
+                state["map"][key] = {"name": "minecraft:crafting_table"}
+            elif value == 3:
+                state["map"][key] = {"name": "minecraft:bedrock"}
 
-        This takes the STDOUT (and STDERR that gets piped to STDOUT from the Subprocess.POpen() command)
-        and places it into a Queue object accessible by the main thread
-        """
-        # read both stdout and stderr
+        state["inventory"] = inventory
+        state["player"] = {
+            "pos": [int(position % grid_size) + 1, 4, int(position // grid_size) + 1]
+        }  # [position] if position is not None else [0]
+        state["treeCount"] = [tree_count]
+        state["goal"] = {"goalAchieved": goalAchieved}
+        state["blockInFront"] = {
+            "name": state["map"][",".join(map(str, state["player"]["pos"]))]["name"]
+        }
 
-        flag_continue = True
-        while flag_continue and not pipe.stdout.closed:
-            try:
-                l = pipe.stdout.readline()
-                q.put(l)
-                sys.stdout.flush()
-                pipe.stdout.flush()
-            except UnicodeDecodeError as e:
-                print(f"Err: UnicodeDecodeError: {e}")
-                try:
-                    l = pipe.stdout.read().decode("utf-8")
-                    q.put(l)
-                    sys.stdout.flush()
-                    pipe.stdout.flush()
-                except Exception as e2:
-                    print(f"ERROR - CANT HANDLE OUTPUT ENCODING! {e2}")
-                    sys.stdout.flush()
-                    pipe.stdout.flush()
-            except Exception as e3:
-                print(f"ERROR - UNKNOWN EXCEPTION! {e3}")
-                sys.stdout.flush()
-                pipe.stdout.flush()
-
-    def _check_queues(self, debug_pal: bool = False):
-        """
-        Check the STDOUT queues in both the PAL and Agent threads, logging the responses appropriately
-        :return: next_line containing the STDOUT of the PAL process only:
-                    used to determine game ending conditions and update the score_dict{}
-        """
-        next_line = ""
-
-        # # write output from procedure A (if there is any)
-        # DN: Remove "blockInFront" data from PAL, as it just gunks up our PAL logs for no good reason.
-        try:
-            next_line = self._q.get(False, timeout=0.025)
-            if debug_pal:
-                print(next_line)
-            sys.stdout.flush()
-            sys.stderr.flush()
-        except queue.Empty:
-            pass
-
-        return next_line
+        return state
