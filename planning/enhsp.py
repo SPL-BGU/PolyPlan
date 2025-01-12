@@ -53,7 +53,7 @@ class ENHSP:
         if not os.path.exists(problem):
             raise Exception("Problem file not found")
 
-        cmd = f"java -jar {self.path}/enhsp.jar -o {domain} -f {problem} -planner {planner} -tolerance {tolerance}"
+        cmd = f"java -jar {self.path}/enhsp.jar -o {domain} -f {problem} -planner {planner} -tolerance {tolerance} -gro naive"
 
         planner = subprocess.Popen(
             "exec " + cmd,
