@@ -7,6 +7,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from envs import MaskedMinecraft
 
 from agents import ExploringSam, HybridPPO
+from polycraft_policy import PolycraftMaskedPPOPolicy
 
 from gym.wrappers import RecordEpisodeStatistics
 
@@ -67,13 +68,13 @@ def main(map_type, map_size, use_fluents_map, steps_per_episode, steps_per_map):
     output_directory_path = f"{os.getcwd()}/dataset/{map_size}"
 
     # make log directory
-    postfix = f"HybridPPO/{map_type}_{map_size}"
+    postfix = f"PogoStick/HybridPPO/{map_type}_{map_size}"
     logdir, models_dir = Logger.create_logdir(postfix, indexing=True)
 
     rec_dir = f"{logdir}/solutions"
     if not os.path.exists(rec_dir):
         os.makedirs(rec_dir)
-    renv = RecordEpisodeStatistics(env, deque_size=5000)
+    renv = RecordEpisodeStatistics(env, deque_size=10000)
 
     exploring_sam = ExploringSam(
         env,
@@ -86,7 +87,8 @@ def main(map_type, map_size, use_fluents_map, steps_per_episode, steps_per_map):
     model = HybridPPO(
         exploring_sam,
         use_fluents_map=use_fluents_map,
-        policy="MlpPolicy",  # PolycraftMaskedPPOPolicy,
+        shortest_possible_plan=5,
+        policy=PolycraftMaskedPPOPolicy,
         env=renv,
         verbose=1,
         n_steps=steps_per_episode,

@@ -19,6 +19,9 @@ class TP(MacroAction):
         self, action: int, state: dict = None, items_decoder: dict = None
     ) -> str:
         """If the action is not available in the this state, return NOP"""
+        if state["position"] == [action]:
+            return ["NOP"]
+
         to_pos = action
         x_pos = (to_pos % self.map_size) + 1
         z_pos = (to_pos // self.map_size) + 1
