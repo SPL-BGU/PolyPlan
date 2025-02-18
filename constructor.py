@@ -21,7 +21,7 @@ random.seed(SEED)
 
 
 def generate_solutions_basic(output_directory_path: Path, problem_index: int) -> bool:
-    domain = "/home/benjamin/Projects/PolyPlan/planning/basic_minecraft_domain.pddl"
+    domain = str(Path("planning/basic_minecraft_domain.pddl").absolute())
     problem = f"{output_directory_path}/basic_map_instance_{problem_index}.pddl"
 
     planner = ENHSP()
@@ -40,7 +40,7 @@ def generate_solutions_basic(output_directory_path: Path, problem_index: int) ->
 def generate_solutions_advanced(
     output_directory_path: Path, problem_index: int
 ) -> bool:
-    domain = "/home/benjamin/Projects/PolyPlan/planning/advanced_minecraft_domain.pddl"
+    domain = str(Path("planning/advanced_minecraft_domain.pddl").absolute())
     problem = f"{output_directory_path}/advanced_map_instance_{problem_index}.pddl"
 
     planner = MetricFF()
