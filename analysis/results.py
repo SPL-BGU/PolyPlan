@@ -9,25 +9,36 @@ from itertools import cycle
 
 def process_task(task_folder):
     subdirs = ["10", "42", "63", "123", "1997"]
-    files = ["Hybrid", "PPO"]
+
+    directory_path = os.path.join(task_folder, os.listdir(task_folder)[0])
+    files = [
+        name
+        for name in os.listdir(directory_path)
+        if os.path.isdir(os.path.join(directory_path, name))
+    ]
+
+    # files = ["Hybrid", "PPO"]
 
     columns_to_remove = [
         "first to goal",
         "who to min",
-        "avg length w/o NSAM",
-        "min length w/o NSAM",
+        "avg length without NSAM",
+        # "min length without NSAM",
     ]
 
     data = {file: [] for file in files}
 
     for subdir in subdirs:
         for file_name in files:
-            if file_name == "Hybrid":
-                df = analysis.analyze_hybrid(os.path.join(task_folder, subdir))
+            if "Hybrid" in file_name:
+                df = analysis.analyze_hybrid(
+                    os.path.join(task_folder, subdir, file_name)
+                )
                 if df is not None:
                     df = df.drop(columns=columns_to_remove, errors="ignore")
-            elif file_name == "PPO":
-                df = analysis.analyze_ppo(os.path.join(task_folder, subdir))
+            elif "PPO" in file_name:
+                df = analysis.analyze_ppo(os.path.join(task_folder, subdir, file_name))
+                df["min length without NSAM"] = df["min length"]
             if df is not None:
                 data[file_name].append(df)
             else:
@@ -55,18 +66,16 @@ def plot_results(data, task_name, output_dir, plot_type):
         if not dfs:
             continue
 
-        # Concatenate and group the data
+        # filter out the files we want to plot
+        # if file_name in ["Hybrid"]:
+        #     continue
+
         grouped = (
             pd.concat(dfs, ignore_index=True)
             .groupby("map")
             .agg(
                 {
-                    "episodes to goal": ["mean", "std"],
-                    "avg score": ["mean", "std"],
-                    "max score": ["mean", "std"],
-                    "avg length": ["mean", "std"],
-                    "min length": ["mean", "std"],
-                    "steps to goal": ["mean", "std"],
+                    plot_type: ["mean", "std"],
                 }
             )
         )
@@ -137,6 +146,9 @@ def plot_results(data, task_name, output_dir, plot_type):
 
         table_data[f"{file_name}"] = mean
 
+    if table_data == {}:
+        return
+
     # Output the DataFrame to a CSV file
     table_data["Map"] = x
     df = pd.DataFrame(table_data)
@@ -162,7 +174,7 @@ def plot_results(data, task_name, output_dir, plot_type):
     plt.close()
 
 
-def main(results_dir, output_dir, plot_type):
+def main(results_dir, output_dir, plot_type_list):
     # task_folders = ["PogoStick", "WoodenSword"]
     task_folders = ["PogoStick"]
     # map_folders = ["6X6"]
@@ -174,20 +186,27 @@ def main(results_dir, output_dir, plot_type):
             task_name = os.path.basename(task_folder)
 
             data = process_task(task_folder)
-            plot_results(
-                data, task_name, os.path.join(output_dir, task, plot_type), plot_type
-            )
+
+            for plot_type in plot_type_list:
+                plot_results(
+                    data,
+                    task_name,
+                    os.path.join(output_dir, task, plot_type),
+                    plot_type,
+                )
 
 
 if __name__ == "__main__":
     results_dir = "results"
     output_dir = "output"
 
-    for plot_type in [
+    plot_type_list = [
         "avg length",
         "min length",
         "max score",
         "steps to goal",
         "episodes to goal",
-    ]:
-        main(results_dir, output_dir, plot_type)
+        "min length without NSAM",
+    ]
+
+    main(results_dir, output_dir, plot_type_list)

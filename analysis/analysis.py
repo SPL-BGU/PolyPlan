@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 
+
 def analyze_hybrid(folder_path: str):
     if not os.path.exists(os.path.join(folder_path, "Hybrid.csv")):
         return None
@@ -14,11 +15,7 @@ def analyze_hybrid(folder_path: str):
     # Add 'log' column to df_hybrid with the log_values
     with open(os.path.join(folder_path, "did_plan.txt"), "r") as file:
         log_values = [line.strip() for line in file.readlines()]
-    num_rows_df = len(df_hybrid)
-    num_lines_txt = len(log_values)
-    if num_lines_txt != num_rows_df:
-        log_values = log_values[:num_rows_df]
-    df_hybrid["log"] = log_values
+    df_hybrid["log"] = log_values[: len(df_hybrid)]
 
     # Step 2: Add Cumulative Length Column
     df_hybrid["cumulative length"] = df_hybrid["length"].cumsum()
@@ -35,8 +32,8 @@ def analyze_hybrid(folder_path: str):
             "first to goal",
             "steps to goal",
             "who to min",
-            "avg length w/o NSAM",
-            "min length w/o NSAM",
+            "avg length without NSAM",
+            "min length without NSAM",
         ]
     )
 
@@ -65,16 +62,19 @@ def analyze_hybrid(folder_path: str):
         first_to_goal = (
             "NSAM"
             if (df_iter["reward"] > 0).any()
-            and df_iter.loc[df_iter["reward"] > 0, "log"].iloc[0] == "plan found"
+            and df_iter.loc[df_iter["reward"] > 0, "log"].iloc[0]
+            in ["plan found", "plan found by shorten"]
             else "PPO"
         )
         who_to_min = (
             "NSAM"
             if df_iter.loc[df_iter["length"] == min_length, "log"].iloc[0]
-            == "plan found"
+            in ["plan found", "plan found by shorten"]
             else "PPO"
         )
-        wo_nsam = df_iter.loc[df_iter["log"] != "plan found", "length"]
+        wo_nsam = df_iter.loc[
+            ~df_iter["log"].isin(["plan found", "plan found by shorten"]), "length"
+        ]
         avg_length_wo_NSAM = wo_nsam.mean()
         min_length_wo_NSAM = wo_nsam.min()
 
@@ -88,21 +88,11 @@ def analyze_hybrid(folder_path: str):
             "first to goal": first_to_goal,
             "steps to goal": steps_to_goal,
             "who to min": who_to_min,
-            "avg length w/o NSAM": avg_length_wo_NSAM,
-            "min length w/o NSAM": min_length_wo_NSAM,
+            "avg length without NSAM": avg_length_wo_NSAM,
+            "min length without NSAM": min_length_wo_NSAM,
         }
 
     return df_table
-    # Step 5: Write Data to Excel File
-    # wb = Workbook()
-    # ws_hybrid = wb.active
-    # ws_hybrid.title = "Hybrid"
-    # for r in dataframe_to_rows(df_hybrid, index=False, header=True):
-    #     ws_hybrid.append(r)
-    # ws_table = wb.create_sheet(title="Table")
-    # for r in dataframe_to_rows(df_table, index=False, header=True):
-    #     ws_table.append(r)
-    # wb.save("output.xlsx")
 
 
 def analyze_ppo(folder_path: str):
