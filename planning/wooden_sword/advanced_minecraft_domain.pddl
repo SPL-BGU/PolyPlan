@@ -19,7 +19,7 @@
         (tree_cell ?c - cell)
         (air_cell ?c - cell)
         (crafting_table_cell ?c - cell)
-        (have_pogo_stick)
+        (have_wooden_sword)
     )
 
     (:functions
@@ -27,8 +27,6 @@
         (count_log_in_inventory)
         (count_planks_in_inventory)
         (count_stick_in_inventory)
-        (count_sack_polyisoprene_pellets_in_inventory)
-        (count_tree_tap_in_inventory)
     )
 
     ; Actions
@@ -36,7 +34,7 @@
         :parameters (?from - cell ?to - cell)
         :precondition (and
             (position ?from)
-            (not (position ?to))
+            (not (= ?from ?to))
         )
         :effect (and
             (not (position ?from))
@@ -79,55 +77,20 @@
         )
     )
 
-    (:action CRAFT_TREE_TAP
-        :parameters (?pos - cell)
-        :precondition (and
-            (position ?pos)
-            (not (position crafting_table))
-            (>= (count_planks_in_inventory) 5)
-            (>= (count_stick_in_inventory) 1)
-        )
-        :effect (and
-            (not (position ?pos))
-            (position crafting_table)
-            (decrease (count_planks_in_inventory) 5)
-            (decrease (count_stick_in_inventory) 1)
-            (increase (count_tree_tap_in_inventory) 1)
-        )
-    )
-
-    (:action CRAFT_WOODEN_POGO
+    (:action CRAFT_WOODEN_SWORD
         :parameters (?pos - cell)
         :precondition (and
             (position ?pos)
             (not (position crafting_table))
             (>= (count_planks_in_inventory) 2)
-            (>= (count_stick_in_inventory) 4)
-            (>= (count_sack_polyisoprene_pellets_in_inventory) 1)
+            (>= (count_stick_in_inventory) 1)
         )
         :effect (and
             (not (position ?pos))
             (position crafting_table)
             (decrease (count_planks_in_inventory) 2)
-            (decrease (count_stick_in_inventory) 4)
-            (decrease
-                (count_sack_polyisoprene_pellets_in_inventory)
-                1)
-            (have_pogo_stick)
-        )
-    )
-
-    (:action PLACE_TREE_TAP
-        :parameters (?pos - cell)
-        :precondition (and
-            (position ?pos)
-            (tree_cell ?pos)
-            (>= (count_tree_tap_in_inventory) 1)
-        )
-        :effect (and
-            (increase
-                (count_sack_polyisoprene_pellets_in_inventory)
-                1)
+            (decrease (count_stick_in_inventory) 1)
+            (have_wooden_sword)
         )
     )
 

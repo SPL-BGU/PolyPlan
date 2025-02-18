@@ -1,0 +1,14 @@
+{
+  "tp_to": [],
+  "break": [],
+  "craft_plank": [
+    "(count_log_in_inventory )"
+  ],
+  "craft_stick": [
+    "(count_planks_in_inventory )"
+  ],
+  "craft_wooden_sword": [
+    "(count_planks_in_inventory )",
+    "(count_stick_in_inventory )"
+  ]
+}
