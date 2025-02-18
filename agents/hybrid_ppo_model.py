@@ -112,6 +112,7 @@ class HybridPPO(MaskablePPO):
                             use_fluents_map=self.use_fluents_map,
                             env_is_reset=True,
                             run_planner=self.run_planner,
+                            run_shortening=True,
                         )
 
                         if self.exploring_sam.error_flag == ErrorFlag.ERROR:

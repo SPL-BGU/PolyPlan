@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.append("planning")
 sys.path.append(CONFIG.NSAM_PATH)
-from planning import MetricFF, validator
+from planning import MetricFF, validator, shorter_plan
 from pddl_plus_parser.lisp_parsers import DomainParser, TrajectoryParser
 from trajectory_creators import ExperimentTrajectoriesCreator
 from utilities import SolverType
@@ -93,6 +93,7 @@ class ExploringSam(PolycraftAgent):
 
         # N-SAM learner
         self.numeric_sam = NumericSAMLearner(self.domain_parser)
+        self.last_short_observation = None
         self.planner = MetricFF()
         self.eval_mode = False
 
@@ -124,12 +125,18 @@ class ExploringSam(PolycraftAgent):
         self.eval_mode = toggle
 
     def update_fixed_explorer(
-        self, use_fluents_map=False, env_is_reset=False, run_planner=True
+        self,
+        use_fluents_map=False,
+        env_is_reset=False,
+        run_planner=True,
+        run_shortening=False,
     ) -> bool:
         try:
             # run nsam
             plan = self.active_nsam(
-                use_fluents_map=use_fluents_map, run_planner=run_planner
+                use_fluents_map=use_fluents_map,
+                run_planner=run_planner,
+                run_shortening=run_shortening,
             )
             if len(plan) == 0:
                 return False
@@ -180,7 +187,11 @@ class ExploringSam(PolycraftAgent):
         )
 
     def active_nsam(
-        self, parser_trajectories=False, use_fluents_map=False, run_planner=True
+        self,
+        parser_trajectories=False,
+        use_fluents_map=False,
+        run_planner=True,
+        run_shortening=False,
     ) -> list:
         """Active N-SAM to learn the action model and return the plan"""
 
@@ -242,13 +253,50 @@ class ExploringSam(PolycraftAgent):
         with open(domain_location, "w") as f:
             f.write(learned_domain)
 
-        # run planner
+        # update problem files
         plan = []
         self.error_flag = ErrorFlag.NO_ERROR
         problem = f"{str(SOLUTIONS_PATH / 'problem.pddl')}"
         domain = f"{str(domain_location)}"
         tloc = f"{SOLUTIONS_PATH}/temp_plan.txt"
         odomain = f"{SOLUTIONS_PATH}/domain.pddl"
+
+        # shorter observation list
+        if run_shortening:
+            goal = "craft_wooden_pogo"  # "craft_wooden_sword" "craft_wooden_pogo"
+            if len(observation_list) != 0:
+                shorter_observation_list = []
+                for observation in observation_list:
+                    if (
+                        (
+                            goal
+                            not in observation.components[-1].grounded_action_call.name
+                        )
+                        or (
+                            observation.components[-1].previous_state
+                            == observation.components[-1].next_state
+                        )
+                        or (observation == self.last_short_observation)
+                    ):
+                        continue
+
+                    observation = shorter_plan(
+                        self.env,
+                        observation,
+                        problem,
+                        self.domain_parser,
+                        learned_model,
+                    )
+
+                    shorter_observation_list.append(observation)
+                    self.last_short_observation = observation
+
+            # if we didn't found a goal
+            if self.last_short_observation == None:
+                self.error_flag = ErrorFlag.ERROR
+                return []
+
+        # run planner
         if run_planner:
             for numeric_precision in [0.1]:
                 self.time_to_plan = time.time()
@@ -275,6 +323,28 @@ class ExploringSam(PolycraftAgent):
                         self.error_flag = ErrorFlag.INVALID_PLAN
                         plan = []
                         break
+
+        # if plan is empty, return the shorter trajectory
+        if run_shortening and (len(plan) == 0):
+            if (goal not in observation.components[-1].grounded_action_call.name) or (
+                observation.components[-1].previous_state
+                == observation.components[-1].next_state
+            ):
+                return []
+
+            self.error_flag = ErrorFlag.FOUND_BY_SHORTEN
+            plan = [
+                str(component.grounded_action_call)
+                for component in observation.components
+            ]
+
+            with open(tloc, "w") as tfile:
+                tfile.write("\n".join(plan))
+
+            valid = validator(Path(odomain), Path(problem), Path(tloc))
+            if not valid:
+                self.error_flag = ErrorFlag.NO_SOLUTION
+                plan = []
 
         return plan
 
