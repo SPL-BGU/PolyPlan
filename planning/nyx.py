@@ -1,4 +1,5 @@
 import config as CONFIG
+from config import ErrorFlag
 import subprocess
 
 import os
@@ -13,8 +14,7 @@ class NYX:
 
     def __init__(self):
         self.path = CONFIG.NYX_PATH
-        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
-        self.explored_states = -1
+        self.error_flag = ErrorFlag.NO_ERROR
 
     def create_plan(
         self, domain: str, problem: str, timeout: int = 60, flag: str = ""
@@ -26,7 +26,7 @@ class NYX:
         :param timeout: the timeout for the planner in seconds
         """
 
-        self.error_flag = 0
+        self.error_flag = ErrorFlag.NO_ERROR
 
         domain = Path(domain).absolute()
         problem = Path(problem).absolute()
@@ -56,7 +56,7 @@ class NYX:
         except subprocess.TimeoutExpired:
             # print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
-            self.error_flag = 2
+            self.error_flag = ErrorFlag.TIMEOUT
             return []
         finally:
             os.chdir(original_dir)
@@ -66,7 +66,7 @@ class NYX:
             break
         if exception_flag:
             planner.kill()
-            self.error_flag = -1
+            self.error_flag = ErrorFlag.ERROR
             raise Exception(f"unknowned error for {domain} {problem}")
 
         plan = []
@@ -94,7 +94,7 @@ class NYX:
                 break
             elif "No Plan Found!" in str(line):
                 # print("Problem unsolvable")
-                self.error_flag = 1
+                self.error_flag = ErrorFlag.NO_SOLUTION
                 break
 
         planner.kill()

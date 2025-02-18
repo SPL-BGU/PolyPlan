@@ -13,7 +13,15 @@ from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_suppo
 
 from sb3_contrib.ppo_mask import MaskablePPO
 
-import time
+from config import ErrorFlag
+
+from enum import Enum
+
+
+class PlanFlag(Enum):
+    NO_PLAN = 0
+    PLAN_FOUND = 1
+    PLAN_EXECUTED = 2
 
 
 class HybridPPO(MaskablePPO):
@@ -35,17 +43,19 @@ class HybridPPO(MaskablePPO):
         super().__init__(**kwargs)
 
         self.exploring_sam = exploring_sam
-        self.plan_exist = 0  # 0: no plan, 1: plan found, 2: plan found and executed
+        self.plan_exist = PlanFlag.NO_PLAN
         self.use_fluents_map = use_fluents_map
         self.shortest_plan = -1
         self.to_logger = ""
         self.shortest_possible_plan = shortest_possible_plan
+        self.run_planner = True
 
     def update_explorer_problem(self, problem):
         self.exploring_sam.update_problem(problem)
-        self.plan_exist = 0
+        self.plan_exist = PlanFlag.NO_PLAN
         self.shortest_plan = -1
         self.to_logger = ""
+        self.run_planner = True
 
     def collect_rollouts(
         self,
@@ -87,65 +97,64 @@ class HybridPPO(MaskablePPO):
                 "Environment does not support action masking. Consider using ActionMasker wrapper"
             )
 
+        # Generating a set of trajectories with a budget of n_rollout_steps
         callback.on_rollout_start()
         while n_steps < n_rollout_steps:
-            # Learn action model and find a plan
+            # Learn action model and find a plan if the environment is reset
             if self.exploring_sam.env.max_steps == self.exploring_sam.env.steps_left:
-                self.exploring_sam.time_to_plan = -1
-                total_nsam_time = -1
-                if self.plan_exist != 1:
+                if self.plan_exist != PlanFlag.PLAN_FOUND:
                     if 0 < self.shortest_plan <= self.shortest_possible_plan:
-                        self.plan_exist = 2
-                        self.to_logger = "didn't tried"
+                        self.plan_exist = PlanFlag.PLAN_EXECUTED
+                        self.to_logger = "didn't try"
                     else:
-                        total_nsam_time = time.time()
+                        # Run NSAM and maybe planner
                         self.exploring_sam.update_fixed_explorer(
-                            use_fluents_map=self.use_fluents_map, env_is_reset=True
+                            use_fluents_map=self.use_fluents_map,
+                            env_is_reset=True,
+                            run_planner=self.run_planner,
                         )
-                        total_nsam_time = time.time() - total_nsam_time
 
-                        if self.exploring_sam.error_flag == -1:
+                        if self.exploring_sam.error_flag == ErrorFlag.ERROR:
                             self.to_logger = "error"
-                        elif self.exploring_sam.error_flag == 0:
+                        elif self.exploring_sam.error_flag in [
+                            ErrorFlag.NO_ERROR,
+                            ErrorFlag.FOUND_BY_SHORTEN,
+                        ]:
                             plan_length = self.exploring_sam.explorer.length
+                            # self.run_planner = False
                             if (
                                 self.shortest_plan == -1
                                 or plan_length < self.shortest_plan
                             ):
-                                self.plan_exist = 1
+                                self.plan_exist = PlanFlag.PLAN_FOUND
                                 self.shortest_plan = plan_length
-                                self.to_logger = "plan found"
+                                if self.exploring_sam.error_flag == ErrorFlag.NO_ERROR:
+                                    self.to_logger = "plan found"
+                                else:
+                                    self.to_logger = "plan found by shorten"
                             else:
                                 self.to_logger = "plan found but not shorter"
-                        elif self.exploring_sam.error_flag == 1:
+                        elif self.exploring_sam.error_flag == ErrorFlag.NO_SOLUTION:
                             self.to_logger = "no solution"
-                        elif self.exploring_sam.error_flag == 2:
+                        elif self.exploring_sam.error_flag == ErrorFlag.TIMEOUT:
                             self.to_logger = "timeout"
-                        elif self.exploring_sam.error_flag == 3:
+                        elif self.exploring_sam.error_flag == ErrorFlag.INVALID_PLAN:
                             self.to_logger = "invalid plan"
 
                 else:
-                    self.plan_exist = 2
-                    self.to_logger = "didn't tried"
-
-                planner_time_log = f"{self.exploring_sam.output_dir}/time_to_plan.txt"
-                with open(planner_time_log, "a") as f:
-                    f.write(f"{self.exploring_sam.time_to_plan}\n")
-
-                nsam_time_log = f"{self.exploring_sam.output_dir}/total_nsam_time.txt"
-                with open(nsam_time_log, "a") as f:
-                    f.write(f"{total_nsam_time}\n")
+                    self.plan_exist = PlanFlag.PLAN_EXECUTED
+                    self.to_logger = "didn't try"
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
 
-                # If we find a plan, we execute it else we use PPO for next action
                 if use_masking:
                     # This is the only change related to invalid action masking
                     action_masks = get_action_masks(env)
 
-                if self.plan_exist == 1:
+                # If we found a plan, we execute it else we use PPO for next action
+                if self.plan_exist == PlanFlag.PLAN_FOUND:
                     action = self.exploring_sam.choose_action()  # next action
                     actions, values, log_probs = self.policy.forward_planner(
                         obs_tensor,
@@ -161,10 +170,19 @@ class HybridPPO(MaskablePPO):
 
             new_obs, rewards, dones, infos = env.step(actions)
 
+            # Write planner logs
             if dones[0]:
                 plan_log = f"{self.exploring_sam.output_dir}/did_plan.txt"
                 with open(plan_log, "a") as f:
                     f.write(f"{self.to_logger}\n")
+
+                planner_time_log = f"{self.exploring_sam.output_dir}/time_to_plan.txt"
+                with open(planner_time_log, "a") as f:
+                    f.write(f"{self.exploring_sam.time_to_plan}\n")
+
+                nsam_time_log = f"{self.exploring_sam.output_dir}/total_nsam_time.txt"
+                with open(nsam_time_log, "a") as f:
+                    f.write(f"{self.exploring_sam.time_to_learn}\n")
 
             self.num_timesteps += env.num_envs
 

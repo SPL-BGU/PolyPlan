@@ -1,4 +1,5 @@
 import config as CONFIG
+from config import ErrorFlag
 import subprocess
 
 import os
@@ -13,7 +14,7 @@ class MetricFF:
 
     def __init__(self):
         self.path = CONFIG.METRIC_FF_PATH
-        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
+        self.error_flag = ErrorFlag.NO_ERROR
         self.explored_states = -1
 
     def create_plan(
@@ -26,7 +27,7 @@ class MetricFF:
         :param timeout: the timeout for the planner in seconds
         """
 
-        self.error_flag = 0
+        self.error_flag = ErrorFlag.NO_ERROR
 
         domain = Path(domain).absolute()
         problem = Path(problem).absolute()
@@ -56,7 +57,7 @@ class MetricFF:
         except subprocess.TimeoutExpired:
             # print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
-            self.error_flag = 2
+            self.error_flag = ErrorFlag.TIMEOUT
             return []
         finally:
             os.chdir(original_dir)
@@ -66,7 +67,7 @@ class MetricFF:
             break
         if exception_flag:
             planner.kill()
-            self.error_flag = -1
+            self.error_flag = ErrorFlag.ERROR
             raise Exception(f"unknowned error for {domain} {problem}")
 
         plan = []
@@ -92,7 +93,7 @@ class MetricFF:
                 ]
             ):
                 # print("Problem unsolvable")
-                self.error_flag = 1
+                self.error_flag = ErrorFlag.NO_SOLUTION
                 break
 
         planner.kill()

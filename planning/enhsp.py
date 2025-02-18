@@ -1,4 +1,5 @@
 import config as CONFIG
+from config import ErrorFlag
 import subprocess
 
 import os
@@ -13,7 +14,7 @@ class ENHSP:
 
     def __init__(self):
         self.path = CONFIG.ENHSP_PATH
-        self.error_flag = 0  # -1: error, 0: no error, 1: no solution, 2: timeout
+        self.error_flag = ErrorFlag.NO_SOLUTION
 
         # Check java version
         java_version = subprocess.check_output(
@@ -42,7 +43,7 @@ class ENHSP:
         :param tolerance: the tolerance for the planner - default is 0.01
         :param timeout: the timeout for the planner in seconds
         """
-        self.error_flag = 0
+        self.error_flag = ErrorFlag.NO_SOLUTION
 
         domain = Path(domain).absolute()
         problem = Path(problem).absolute()
@@ -67,7 +68,7 @@ class ENHSP:
         except subprocess.TimeoutExpired:
             # print(f"Can't find a plan in {timeout} seconds")
             planner.kill()
-            self.error_flag = 2
+            self.error_flag = ErrorFlag.TIMEOUT
             return []
 
         exception_flag = False
@@ -75,11 +76,11 @@ class ENHSP:
             exception_flag = True
             if "Goal is not reachable" in str(line):
                 exception_flag = False
-                self.error_flag = 1
+                self.error_flag = ErrorFlag.NO_SOLUTION
                 break
         if exception_flag:
             planner.kill()
-            self.error_flag = -1
+            self.error_flag = ErrorFlag.ERROR
             raise Exception(f"unknowned error for {domain} {problem}")
 
         plan = []
@@ -101,7 +102,7 @@ class ENHSP:
                 break
             elif "Problem unsolvable" in str(line) or "Unsolvable" in str(line):
                 # print("Problem unsolvable")
-                self.error_flag = 1
+                self.error_flag = ErrorFlag.NO_SOLUTION
                 break
 
         planner.kill()

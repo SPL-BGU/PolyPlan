@@ -3,8 +3,11 @@ from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.type_aliases import MaybeCallback
 from utils import Logger
 import config as CONFIG
+from config import ErrorFlag
+
 
 import os
+import re
 import sys
 import json
 import time
@@ -15,14 +18,11 @@ sys.path.append("planning")
 sys.path.append(CONFIG.NSAM_PATH)
 from planning import MetricFF, validator
 from pddl_plus_parser.lisp_parsers import DomainParser, TrajectoryParser
-from observations.experiments_trajectories_creator import (
-    ExperimentTrajectoriesCreator,
-    SolverType,
-)
-from sam_learning import NumericSAMLearner
+from trajectory_creators import ExperimentTrajectoriesCreator
+from utilities import SolverType
+from sam_learning.learners import NumericSAMLearner
 import logging
 
-os.environ["CONVEX_HULL_ERROR_PATH"] = "temp_files/ch_error.txt"
 logging.root.setLevel(logging.ERROR)
 
 
@@ -38,9 +38,7 @@ class Explore(BaseCallback):
         super().__init__(verbose)
         self.episodes = 0
         self.save_interval = save_interval
-        self.error_flag = (
-            0  # -1: error, 0: no error, 1: no solution, 2: timeout, 3: invalid plan
-        )
+        self.error_flag = ErrorFlag.NO_ERROR
 
     def _on_step(self) -> bool:
         return True
@@ -81,24 +79,29 @@ class ExploringSam(PolycraftAgent):
         self.explorer = explorer
         self.saved_explorer = None
 
-        # N-SAM learner
-        self.nsam = CONFIG.NSAM_PATH
-        self.planner = MetricFF()
-        self.eval_mode = False
-
-        self.observation_list = []
         self.observation_count = 0
 
         self.output_dir = Path(output_dir).absolute()
         shutil.copyfile(domain, f"{output_dir}/domain.pddl")
         shutil.copyfile(problem, f"{output_dir}/problem.pddl")
         shutil.copyfile(fluents_map, f"{output_dir}/fluents_map.json")
+        self.domain_parser = DomainParser(
+            Path(self.output_dir) / "domain.pddl", partial_parsing=True
+        ).parse_domain()
+        with open(Path(self.output_dir) / "fluents_map.json", "rt") as json_file:
+            self.fluents_map = json.load(json_file)
+
+        # N-SAM learner
+        self.numeric_sam = NumericSAMLearner(self.domain_parser)
+        self.planner = MetricFF()
+        self.eval_mode = False
 
         # logger
         self.save_path = save_path
         self.save_interval = save_interval
-        self.error_flag = 0
+        self.error_flag = ErrorFlag.NO_ERROR
         self.time_to_plan = -1
+        self.time_to_learn = -1
 
     def update_problem(self, problem: str) -> None:
         """Update the problem file"""
@@ -120,12 +123,18 @@ class ExploringSam(PolycraftAgent):
 
         self.eval_mode = toggle
 
-    def update_fixed_explorer(self, use_fluents_map=False, env_is_reset=False) -> bool:
+    def update_fixed_explorer(
+        self, use_fluents_map=False, env_is_reset=False, run_planner=True
+    ) -> bool:
         try:
-            plan = self.active_nsam(use_fluents_map=use_fluents_map)
+            # run nsam
+            plan = self.active_nsam(
+                use_fluents_map=use_fluents_map, run_planner=run_planner
+            )
             if len(plan) == 0:
                 return False
 
+            # gym agent to execute the plan
             self.explorer = FixedScriptAgent(
                 self.env,
                 script=plan,
@@ -141,7 +150,10 @@ class ExploringSam(PolycraftAgent):
         return self.explorer.choose_action(state)
 
     def learn(self, total_timesteps: int, callback: MaybeCallback = None):
-        """Learn the policy for a total of `total_timesteps` steps."""
+        """
+        Learn the policy for a total of `total_timesteps` steps.
+        Standart RL learn method with callback to save the plan.
+        """
 
         if self.explorer is None:
             raise Exception("E-SAM must have an explorer agent in order to work.")
@@ -173,6 +185,8 @@ class ExploringSam(PolycraftAgent):
         """Active N-SAM to learn the action model and return the plan"""
 
         SOLUTIONS_PATH = Path(self.output_dir)
+        self.time_to_plan = -1
+        self.time_to_learn = -1
 
         # create pddl trajectories
         if parser_trajectories:
@@ -183,76 +197,85 @@ class ExploringSam(PolycraftAgent):
             trajectory_creator.fix_solution_files(selected_solver)
             trajectory_creator.create_domain_trajectories()
 
-        # run nsam
-        domain = DomainParser(
-            SOLUTIONS_PATH / "domain.pddl", partial_parsing=True
-        ).parse_domain()
-        if use_fluents_map:
-            with open(SOLUTIONS_PATH / "fluents_map.json", "rt") as json_file:
-                fluents_map = json.load(json_file)
-
+        # load trajectories
         all_files = os.listdir(SOLUTIONS_PATH)
-        trajectory_files = [
-            file
-            for file in all_files
-            if file.endswith(".trajectory")
-            and os.path.getsize(SOLUTIONS_PATH / file) > 0
-        ]
+        trajectory_files = sorted(
+            [file for file in all_files if file.endswith(".trajectory")],
+            key=lambda s: [
+                int(text) if text.isdigit() else text.lower()
+                for text in re.split(r"(\d+)", s)
+            ],
+        )
+        if (
+            trajectory_files
+            and os.path.getsize(SOLUTIONS_PATH / trajectory_files[-1]) == 0
+        ):
+            trajectory_files.pop()
 
         if len(trajectory_files) == 0:
-            self.error_flag = -1
+            self.error_flag = ErrorFlag.ERROR
             return []
 
+        # parse trajectories
+        observation_list = []
         for trajectory in trajectory_files[self.observation_count :]:
-            observation = TrajectoryParser(domain).parse_trajectory(
+            observation = TrajectoryParser(self.domain_parser).parse_trajectory(
                 SOLUTIONS_PATH / f"{trajectory}"
             )
-            self.observation_list.append(observation)
+            observation_list.append(observation)
+
         self.observation_count = len(trajectory_files)
 
+        # update numeric sam
         if use_fluents_map:
-            numeric_sam = NumericSAMLearner(domain, fluents_map)
+            self.numeric_sam.relevant_fluents = self.fluents_map
         else:
-            numeric_sam = NumericSAMLearner(domain)
-        learned_model, _ = numeric_sam.learn_action_model(self.observation_list)
+            self.numeric_sam.relevant_fluents = None
+        learned_model, learning_metadata = self.numeric_sam.learn_action_model(
+            observation_list
+        )
+        self.time_to_learn = learning_metadata.pop("learning_time", 0)
+
+        # output learned model
         learned_domain = learned_model.to_pddl()
         domain_location = SOLUTIONS_PATH / f"domain{len(trajectory_files)}.pddl"
         with open(domain_location, "w") as f:
             f.write(learned_domain)
 
         # run planner
-        if not run_planner:
-            self.error_flag = 0
-            return []
-
+        plan = []
+        self.error_flag = ErrorFlag.NO_ERROR
         problem = f"{str(SOLUTIONS_PATH / 'problem.pddl')}"
         domain = f"{str(domain_location)}"
         tloc = f"{SOLUTIONS_PATH}/temp_plan.txt"
         odomain = f"{SOLUTIONS_PATH}/domain.pddl"
+        if run_planner:
+            for numeric_precision in [0.1]:
+                self.time_to_plan = time.time()
+                plan = self.planner.create_plan(
+                    domain=domain,
+                    problem=problem,
+                    timeout=300,
+                    flag=f"-t {numeric_precision}",
+                )
+                self.time_to_plan = time.time() - self.time_to_plan
 
-        for numeric_precision in [0.01, 0.1, 0.2]:
-            self.time_to_plan = time.time()
-            plan = self.planner.create_plan(
-                domain=domain,
-                problem=problem,
-                flag=f"-t {numeric_precision}",
-            )
-            self.time_to_plan = time.time() - self.time_to_plan
+                self.error_flag = self.planner.error_flag
 
-            if len(plan) > 0:
-                # Validate the plan
-                with open(tloc, "w") as tfile:
-                    tfile.write("\n".join(plan))
+                if len(plan) > 0:
+                    # Validate the plan
+                    with open(tloc, "w") as tfile:
+                        tfile.write("\n".join(plan))
 
-                valid = validator(Path(odomain), Path(problem), Path(tloc))
-                if valid:
-                    break
-                else:
-                    self.error_flag = 1
-                    plan = []
-                    break
+                    valid = validator(Path(odomain), Path(problem), Path(tloc))
+                    if valid:
+                        self.error_flag = ErrorFlag.NO_ERROR
+                        break
+                    else:
+                        self.error_flag = ErrorFlag.INVALID_PLAN
+                        plan = []
+                        break
 
-        self.error_flag = self.planner.error_flag
         return plan
 
     def save_plan(self, plan):
