@@ -19,7 +19,7 @@ While the project has not been formally tested, it should function correctly whe
 xvfb-run -s '-screen 0 1280x1024x24' ./gradlew --no-daemon --stacktrace runclient
 ```
 * This will run Polycraft independently in headless mode. Gradle will install any dependencies that the java runtime needs, and eventually a message will appear in the log output Minecraft finished loading, which signifies that Polycraft is ready to use. Exit out of the application.
-5. Follow the installation of [Numeric-SAM (N-SAM)](https://github.com/Search-BGU/numeric-sam/tree/938ce5511c9bfcabf976b8f079a9b15a19baf1a1).
+5. Follow the installation of [Numeric-SAM (N-SAM)](https://github.com/argaman-aloni/sam_learning/tree/55-add-the-ability-to-iterate-over-action-triplets-instead-of-complete-trajectories).
 6. pip install all the requirements for this project:
 ```
 python -m pip install -r requirements.txt
@@ -85,6 +85,11 @@ model = FixedScriptAgent(env, script=plan)
 ```
 tensorboard --logdir logs
 ```
+7. The code of our Hybrid approch can be seen in:
+```
+agents/exploring_sam.py
+agents/hybrid_ppo_model.py
+```
 
 ## How to reproduce results in the paper
 1. Recreate the maps:
@@ -107,15 +112,19 @@ python playground_online.py
 ```
 python playground_online_hybrid.py
 ```
+* Note that the reproduction of the Wooden Sword task is in the equalvine file named with "sword" at the end
 
 # Citations
 
-If you find our work interesting or the repo useful, please consider citing [this paper](https://openreview.net/forum?id=UNNYk2Kswa):
+If you find our work interesting or the repo useful, please consider citing [this paper](https://arxiv.org/abs/2502.13006):
 ```
-@article{benyaminsolving,
-  title={Solving Minecraft Tasks via Model Learning},
-  author={Benyamin, Yarin and Mordoch, Argaman and Shperberg, Shahaf and Stern, Roni},
-  booktitle={PRL Workshop Series - Bridging the Gap Between AI Planning and Reinforcement Learning},
-  year={2024}
+@misc{benyamin2025integratingreinforcementlearningaction,
+      title={Integrating Reinforcement Learning, Action Model Learning, and Numeric Planning for Tackling Complex Tasks}, 
+      author={Yarin Benyamin and Argaman Mordoch and Shahaf S. Shperberg and Roni Stern},
+      year={2025},
+      eprint={2502.13006},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2502.13006}, 
 }
 ```
